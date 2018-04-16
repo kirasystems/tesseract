@@ -49,6 +49,7 @@ bin_PROGRAMS = \
    combine_tessdata \
    dawg2wordlist \
    lstmeval \
+   lstmfcheck \
    lstmtraining \
    merge_unicharsets \
    mftraining \
@@ -109,6 +110,15 @@ lstmeval_LDADD = \
     libtesseract_tessopt.la \
     $(ICU_UC_LIBS)
 lstmeval_LDADD += \
+    ../api/libtesseract.la
+
+lstmfcheck_SOURCES = lstmfcheck.cpp
+#lstmeval_LDFLAGS = -static
+lstmfcheck_LDADD = \
+    libtesseract_training.la \
+    libtesseract_tessopt.la \
+    $(ICU_UC_LIBS)
+lstmfcheck_LDADD += \
     ../api/libtesseract.la
 
 lstmtraining_SOURCES = lstmtraining.cpp
