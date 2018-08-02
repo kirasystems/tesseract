@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////
 
 #include "networkio.h"
+#include <cfloat>        // for FLT_MAX
 
 #include "allheaders.h"
 #include "functions.h"
@@ -49,10 +50,9 @@ void NetworkIO::Resize2d(bool int_mode, int width, int num_features) {
 // Resizes to a specific stride_map.
 void NetworkIO::ResizeToMap(bool int_mode, const StrideMap& stride_map,
                             int num_features) {
-  // If this assert fails, it most likely got here through an uninitialized
-  // scratch element, ie call NetworkScratch::IO::Resizexxx() not
-  // NetworkIO::Resizexxx()!!
-  ASSERT_HOST(this != nullptr);
+  // If this method crashes with this == nullptr,
+  // it most likely got here through an uninitialized scratch element,
+  // ie call NetworkScratch::IO::Resizexxx() not NetworkIO::Resizexxx()!!
   stride_map_ = stride_map;
   int_mode_ = int_mode;
   if (int_mode_) {
@@ -465,7 +465,7 @@ void NetworkIO::ScoresOverRange(int t_start, int t_end, int choice, int null_ch,
     float score = ProbToCertainty(line[choice]);
     float zero = ProbToCertainty(line[null_ch]);
     if (t == t_start) {
-      ratings[2] = MAX_FLOAT32;
+      ratings[2] = FLT_MAX;
       ratings[1] = -score;
       certs[1] = score;
     } else {
@@ -495,7 +495,7 @@ int NetworkIO::BestLabel(int t, int not_this, int not_that,
                          float* score) const {
   ASSERT_HOST(!int_mode_);
   int best_index = -1;
-  float best_score = -MAX_FLOAT32;
+  float best_score = -FLT_MAX;
   const float* line = f_[t];
   for (int i = 0; i < f_.dim2(); ++i) {
     if (line[i] > best_score && i != not_this && i != not_that) {
@@ -719,7 +719,7 @@ float NetworkIO::MinOfMaxes() const {
   int width = Width();
   int num_features = NumFeatures();
   for (int t = 0; t < width; ++t) {
-    float max_value = -MAX_FLOAT32;
+    float max_value = -FLT_MAX;
     if (int_mode_) {
       const int8_t* column = i_[t];
       for (int i = 0; i < num_features; ++i) {

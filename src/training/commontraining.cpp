@@ -13,8 +13,54 @@
 
 #include "commontraining.h"
 
+#ifdef DISABLED_LEGACY_ENGINE
+
 #include <algorithm>
-#include <assert.h>
+#include <cmath>
+
+#include "params.h"
+#include "tessopt.h"
+#include "tprintf.h"
+
+
+INT_PARAM_FLAG(debug_level, 0, "Level of Trainer debugging");
+INT_PARAM_FLAG(load_images, 0, "Load images with tr files");
+STRING_PARAM_FLAG(configfile, "", "File to load more configs from");
+STRING_PARAM_FLAG(D, "", "Directory to write output files to");
+STRING_PARAM_FLAG(F, "font_properties", "File listing font properties");
+STRING_PARAM_FLAG(X, "", "File listing font xheights");
+STRING_PARAM_FLAG(U, "unicharset", "File to load unicharset from");
+STRING_PARAM_FLAG(O, "", "File to write unicharset to");
+STRING_PARAM_FLAG(output_trainer, "", "File to write trainer to");
+STRING_PARAM_FLAG(test_ch, "", "UTF8 test character string");
+
+
+/**
+ * This routine parses the command line arguments that were
+ * passed to the program and ses them to set relevant
+ * training-related global parameters
+ *
+ * Globals:
+ * - Config  current clustering parameters
+ * @param argc number of command line arguments to parse
+ * @param argv command line arguments
+ * @return none
+ * @note Exceptions: Illegal options terminate the program.
+ */
+void ParseArguments(int* argc, char ***argv) {
+  STRING usage;
+  if (*argc) {
+    usage += (*argv)[0];
+    usage += " -v | --version | ";
+    usage += (*argv)[0];
+  }
+  usage += " [.tr files ...]";
+  tesseract::ParseCommandLineFlags(usage.c_str(), argc, argv, true);
+}
+
+#else
+
+#include <algorithm>
 #include <cmath>
 
 #include "allheaders.h"
@@ -22,7 +68,6 @@
 #include "classify.h"
 #include "cluster.h"
 #include "clusttool.h"
-#include "efio.h"
 #include "emalloc.h"
 #include "featdefs.h"
 #include "fontinfo.h"
@@ -81,7 +126,6 @@ DOUBLE_PARAM_FLAG(clusterconfig_confidence, Config.Confidence,
  * @param argc number of command line arguments to parse
  * @param argv command line arguments
  * @return none
- * @note Exceptions: Illegal options terminate the program.
  */
 void ParseArguments(int* argc, char ***argv) {
   STRING usage;
@@ -157,7 +201,7 @@ void WriteShapeTable(const STRING& file_prefix, const ShapeTable& shape_table) {
 }
 
 /**
- * Creates a MasterTraininer and loads the training data into it:
+ * Creates a MasterTrainer and loads the training data into it:
  * Initializes feature_defs and IntegerFX.
  * Loads the shape_table if shape_table != nullptr.
  * Loads initial unicharset from -U command-line option.
@@ -167,6 +211,7 @@ void WriteShapeTable(const STRING& file_prefix, const ShapeTable& shape_table) {
  *  - Loads samples from .tr files in remaining command-line args.
  *  - Deletes outliers and computes canonical samples.
  *  - If FLAGS_output_trainer is set, saves the trainer for future use.
+ *    TODO: Who uses that? There is currently no code which reads it.
  * Computes canonical and cloud features.
  * If shape_table is not nullptr, but failed to load, make a fake flat one,
  * as shape clustering was not run.
@@ -282,8 +327,6 @@ MasterTrainer* LoadTrainingData(int argc, const char* const * argv,
  * Globals:
  * - tessoptind defined by tessopt sys call
  * @return Next command line argument or nullptr.
- * @note Exceptions: none
- * @note History: Fri Aug 18 09:34:12 1989, DSJ, Created.
  */
 const char *GetNextFilename(int argc, const char* const * argv) {
   if (tessoptind < argc)
@@ -301,8 +344,6 @@ const char *GetNextFilename(int argc, const char* const * argv) {
  * @param Label label to search for
  * @return Labeled list with the specified label or nullptr.
  * @note Globals: none
- * @note Exceptions: none
- * @note History: Fri Aug 18 15:57:41 1989, DSJ, Created.
  */
 LABELEDLIST FindList(LIST List, char* Label) {
   LABELEDLIST LabeledList;
@@ -324,8 +365,6 @@ LABELEDLIST FindList(LIST List, char* Label) {
  * @param Label label for new list
  * @return New, empty labeled list.
  * @note Globals: none
- * @note Exceptions: none
- * @note History: Fri Aug 18 16:08:46 1989, DSJ, Created.
  */
 LABELEDLIST NewLabeledList(const char* Label) {
   LABELEDLIST LabeledList;
@@ -356,11 +395,6 @@ LABELEDLIST NewLabeledList(const char* Label) {
  * @param training_samples
  * @return none
  * @note Globals: none
- * @note Exceptions: none
- * @note History:
- * - Fri Aug 18 13:11:39 1989, DSJ, Created.
- * - Tue May 17 1998 simplifications to structure, illiminated
- *   font, and feature specification levels of structure.
  */
 void ReadTrainingSamples(const FEATURE_DEFS_STRUCT& feature_defs,
                          const char *feature_name, int max_samples,
@@ -423,8 +457,6 @@ void ReadTrainingSamples(const FEATURE_DEFS_STRUCT& feature_defs,
  * @param CharList list of all fonts in document
  * @return none
  * @note Globals: none
- * @note Exceptions: none
- * @note History: Fri Aug 18 17:44:27 1989, DSJ, Created.
  */
 void FreeTrainingSamples(LIST CharList) {
   LABELEDLIST char_sample;
@@ -452,8 +484,6 @@ void FreeTrainingSamples(LIST CharList) {
  * @param LabeledList labeled list to be freed
  * @note Globals: none
  * @return none
- * @note Exceptions: none
- * @note History: Fri Aug 18 17:52:45 1989, DSJ, Created.
  */
 void FreeLabeledList(LABELEDLIST LabeledList) {
   destroy(LabeledList->List);
@@ -472,15 +502,13 @@ void FreeLabeledList(LABELEDLIST LabeledList) {
  * given character.
  * @return Pointer to new clusterer data structure.
  * @note Globals: None
- * @note Exceptions: None
- * @note History: 8/16/89, DSJ, Created.
  */
 CLUSTERER *SetUpForClustering(const FEATURE_DEFS_STRUCT &FeatureDefs,
                               LABELEDLIST char_sample,
                               const char* program_feature_type) {
   uint16_t N;
   int i, j;
-  FLOAT32* Sample = nullptr;
+  float* Sample = nullptr;
   CLUSTERER *Clusterer;
   int32_t CharID;
   LIST FeatureList = nullptr;
@@ -496,7 +524,7 @@ CLUSTERER *SetUpForClustering(const FEATURE_DEFS_STRUCT &FeatureDefs,
   iterate(FeatureList) {
     FeatureSet = (FEATURE_SET) first_node(FeatureList);
     for (i = 0; i < FeatureSet->MaxNumFeatures; i++) {
-      if (Sample == nullptr) Sample = (FLOAT32*)Emalloc(N * sizeof(FLOAT32));
+      if (Sample == nullptr) Sample = (float*)Emalloc(N * sizeof(float));
       for (j = 0; j < N; j++)
         Sample[j] = FeatureSet->Features[i]->Params[j];
       MakeSample (Clusterer, Sample, CharID);
@@ -519,16 +547,16 @@ void MergeInsignificantProtos(LIST ProtoList, const char* label,
     Prototype = (PROTOTYPE *) first_node (pProtoList);
     if (Prototype->Significant || Prototype->Merged)
       continue;
-    FLOAT32 best_dist = 0.125;
+    float best_dist = 0.125;
     PROTOTYPE* best_match = nullptr;
     // Find the nearest alive prototype.
     LIST list_it = ProtoList;
     iterate(list_it) {
       PROTOTYPE* test_p = (PROTOTYPE *) first_node (list_it);
       if (test_p != Prototype && !test_p->Merged) {
-        FLOAT32 dist = ComputeDistance(Clusterer->SampleSize,
-                                       Clusterer->ParamDesc,
-                                       Prototype->Mean, test_p->Mean);
+        float dist = ComputeDistance(Clusterer->SampleSize,
+                                     Clusterer->ParamDesc,
+                                     Prototype->Mean, test_p->Mean);
         if (dist < best_dist) {
           best_match = test_p;
           best_dist = dist;
@@ -614,7 +642,7 @@ LIST RemoveInsignificantProtos(
     {
       NewProto = (PROTOTYPE *)Emalloc(sizeof(PROTOTYPE));
 
-      NewProto->Mean = (FLOAT32 *)Emalloc(N * sizeof(FLOAT32));
+      NewProto->Mean = (float *)Emalloc(N * sizeof(float));
       NewProto->Significant = Proto->Significant;
       NewProto->Style = Proto->Style;
       NewProto->NumSamples = Proto->NumSamples;
@@ -624,7 +652,7 @@ LIST RemoveInsignificantProtos(
       for (i=0; i < N; i++)
         NewProto->Mean[i] = Proto->Mean[i];
       if (Proto->Variance.Elliptical != nullptr) {
-        NewProto->Variance.Elliptical = (FLOAT32 *)Emalloc(N * sizeof(FLOAT32));
+        NewProto->Variance.Elliptical = (float *)Emalloc(N * sizeof(float));
         for (i=0; i < N; i++)
           NewProto->Variance.Elliptical[i] = Proto->Variance.Elliptical[i];
       }
@@ -632,7 +660,7 @@ LIST RemoveInsignificantProtos(
         NewProto->Variance.Elliptical = nullptr;
       //---------------------------------------------
       if (Proto->Magnitude.Elliptical != nullptr) {
-        NewProto->Magnitude.Elliptical = (FLOAT32 *)Emalloc(N * sizeof(FLOAT32));
+        NewProto->Magnitude.Elliptical = (float *)Emalloc(N * sizeof(float));
         for (i=0; i < N; i++)
           NewProto->Magnitude.Elliptical[i] = Proto->Magnitude.Elliptical[i];
       }
@@ -640,7 +668,7 @@ LIST RemoveInsignificantProtos(
         NewProto->Magnitude.Elliptical = nullptr;
       //------------------------------------------------
       if (Proto->Weight.Elliptical != nullptr) {
-        NewProto->Weight.Elliptical = (FLOAT32 *)Emalloc(N * sizeof(FLOAT32));
+        NewProto->Weight.Elliptical = (float *)Emalloc(N * sizeof(float));
         for (i=0; i < N; i++)
           NewProto->Weight.Elliptical[i] = Proto->Weight.Elliptical[i];
       }
@@ -689,8 +717,6 @@ MERGE_CLASS NewLabeledClass(const char* Label) {
  * @param ClassList list of all fonts in document
  * @return none
  * @note Globals: none
- * @note Exceptions: none
- * @note History: Fri Aug 18 17:44:27 1989, DSJ, Created.
  */
 void FreeLabeledClassList(LIST ClassList) {
   MERGE_CLASS MergeClass;
@@ -778,7 +804,7 @@ void Normalize (
   float Intercept;
   float Normalizer;
 
-  Slope      = tan (Values [2] * 2 * PI);
+  Slope      = tan(Values [2] * 2 * M_PI);
   Intercept  = Values [1] - Slope * Values [0];
   Normalizer = 1 / sqrt (Slope * Slope + 1.0);
 
@@ -836,3 +862,5 @@ int NumberOfProtos(LIST ProtoList, bool CountSigProtos,
   }
   return(N);
 }
+
+#endif  // def DISABLED_LEGACY_ENGINE

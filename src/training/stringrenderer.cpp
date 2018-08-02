@@ -47,7 +47,6 @@ static const int kDefaultOutputResolution = 300;
 // recommendation in http://unicode.org/reports/tr14/ to avoid line-breaks at
 // hyphens and other non-alpha characters.
 static const char* kWordJoinerUTF8 = "\u2060";
-static const char32 kWordJoiner = 0x2060;
 
 static bool IsCombiner(int ch) {
   const int char_type = u_charType(ch);
@@ -69,7 +68,7 @@ static bool RandBool(const double prob, TRand* rand) {
 }
 
 /* static */
-Pix* CairoARGB32ToPixFormat(cairo_surface_t *surface) {
+static Pix* CairoARGB32ToPixFormat(cairo_surface_t *surface) {
   if (cairo_image_surface_get_format(surface) != CAIRO_FORMAT_ARGB32) {
     printf("Unexpected surface format %d\n",
            cairo_image_surface_get_format(surface));

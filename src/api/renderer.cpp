@@ -19,7 +19,7 @@
 #include "config_auto.h"
 #endif
 
-#include <string.h>
+#include <cstring>
 #include <memory>  // std::unique_ptr
 #include "baseapi.h"
 #include "genericvector.h"
@@ -104,8 +104,7 @@ void TessResultRenderer::AppendString(const char* s) {
 }
 
 void TessResultRenderer::AppendData(const char* s, int len) {
-  int n = fwrite(s, 1, len, fout_);
-  if (n != len) happy_ = false;
+  if (!tesseract::Serialize(fout_, s, len)) happy_ = false;
 }
 
 bool TessResultRenderer::BeginDocumentHandler() {
@@ -258,6 +257,8 @@ bool TessBoxTextRenderer::AddImageHandler(TessBaseAPI* api) {
   return true;
 }
 
+#ifndef DISABLED_LEGACY_ENGINE
+
 /**********************************************************************
  * Osd Text Renderer interface implementation
  **********************************************************************/
@@ -273,5 +274,7 @@ bool TessOsdRenderer::AddImageHandler(TessBaseAPI* api) {
 
   return true;
 }
+
+#endif // ndef DISABLED_LEGACY_ENGINE
 
 }  // namespace tesseract

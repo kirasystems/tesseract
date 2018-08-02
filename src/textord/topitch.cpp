@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        topitch.cpp  (Formerly to_pitch.c)
  * Description: Code to determine fixed pitchness and the pitch if fixed.
- * Author:    Ray Smith
- * Created:   Tue Aug 24 16:57:29 BST 1993
+ * Author:      Ray Smith
+ * Created:     Tue Aug 24 16:57:29 BST 1993
  *
  * (C) Copyright 1993, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,20 +17,16 @@
  *
  **********************************************************************/
 
-#ifdef __UNIX__
-#include          <assert.h>
-#endif
-#include          "stderr.h"
-#include          "blobbox.h"
-#include          "statistc.h"
-#include          "drawtord.h"
-#include          "makerow.h"
-#include          "pitsync1.h"
-#include          "pithsync.h"
-#include          "tovars.h"
-#include          "wordseg.h"
-#include          "topitch.h"
-#include          "helpers.h"
+#include "blobbox.h"
+#include "statistc.h"
+#include "drawtord.h"
+#include "makerow.h"
+#include "pitsync1.h"
+#include "pithsync.h"
+#include "tovars.h"
+#include "wordseg.h"
+#include "topitch.h"
+#include "helpers.h"
 
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H

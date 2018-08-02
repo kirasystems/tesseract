@@ -7,16 +7,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include          "statistc.h"
-#include          "gap_map.h"
 
-#define EXTERN
-EXTERN BOOL_VAR (gapmap_debug, FALSE, "Say which blocks have tables");
-EXTERN BOOL_VAR (gapmap_use_ends, FALSE,
-"Use large space at start and end of rows");
-EXTERN BOOL_VAR (gapmap_no_isolated_quanta, FALSE,
+#include "statistc.h"
+#include "gap_map.h"
+
+BOOL_VAR(gapmap_debug, FALSE, "Say which blocks have tables");
+BOOL_VAR(gapmap_use_ends, FALSE, "Use large space at start and end of rows");
+BOOL_VAR(gapmap_no_isolated_quanta, FALSE,
 "Ensure gaps not less than 2quanta wide");
-EXTERN double_VAR (gapmap_big_gaps, 1.75, "xht multiplier");
+double_VAR(gapmap_big_gaps, 1.75, "xht multiplier");
 
 /*************************************************************************
  * A block gap map is a quantised histogram of whitespace regions in the
@@ -73,13 +72,15 @@ GAPMAP::GAPMAP(                 //Constructor
     }
   }
   if ((total_rows < 3) || (min_left >= max_right)) {
+    bucket_size = 0;
+    map_max = 0;
     total_rows = 0;
     min_left = max_right = 0;
     return;
   }
   bucket_size = (int16_t) floor (xht_stats.median () + 0.5) / 2;
   map_max = (max_right - min_left) / bucket_size;
-  map = (int16_t *) alloc_mem ((map_max + 1) * sizeof (int16_t));
+  map = new int16_t[map_max + 1];
   for (i = 0; i <= map_max; i++)
     map[i] = 0;
 

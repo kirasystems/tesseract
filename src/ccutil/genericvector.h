@@ -564,12 +564,17 @@ class PointerVector : public GenericVector<T*> {
   // Also needs T::T(), as new T is used in this function.
   // Returns false in case of error.
   bool DeSerialize(bool swap, FILE* fp) {
-    int32_t reserved;
+    uint32_t reserved;
     if (fread(&reserved, sizeof(reserved), 1, fp) != 1) return false;
     if (swap) Reverse32(&reserved);
+    // Arbitrarily limit the number of elements to protect against bad data.
+    assert(reserved <= UINT16_MAX);
+    if (reserved > UINT16_MAX) {
+      return false;
+    }
     GenericVector<T*>::reserve(reserved);
     truncate(0);
-    for (int i = 0; i < reserved; ++i) {
+    for (uint32_t i = 0; i < reserved; ++i) {
       int8_t non_null;
       if (fread(&non_null, sizeof(non_null), 1, fp) != 1) return false;
       T* item = nullptr;
@@ -657,9 +662,9 @@ template <typename T>
 void GenericVector<T>::init(int size) {
   size_used_ = 0;
   size_reserved_ = 0;
-  data_ = 0;
-  clear_cb_ = 0;
-  compare_cb_ = 0;
+  data_ = nullptr;
+  clear_cb_ = nullptr;
+  compare_cb_ = nullptr;
   reserve(size);
 }
 
@@ -943,9 +948,12 @@ bool GenericVector<T>::Serialize(tesseract::TFile* fp) const {
 // If swap is true, assumes a big/little-endian swap is needed.
 template <typename T>
 bool GenericVector<T>::DeSerialize(bool swap, FILE* fp) {
-  int32_t reserved;
+  uint32_t reserved;
   if (fread(&reserved, sizeof(reserved), 1, fp) != 1) return false;
   if (swap) Reverse32(&reserved);
+  // Arbitrarily limit the number of elements to protect against bad data.
+  assert(reserved <= UINT16_MAX);
+  if (reserved > UINT16_MAX) return false;
   reserve(reserved);
   size_used_ = reserved;
   if (fread(data_, sizeof(T), size_used_, fp) != unsigned_size()) return false;
@@ -957,15 +965,19 @@ bool GenericVector<T>::DeSerialize(bool swap, FILE* fp) {
 }
 template <typename T>
 bool GenericVector<T>::DeSerialize(tesseract::TFile* fp) {
-  int32_t reserved;
+  uint32_t reserved;
   if (fp->FReadEndian(&reserved, sizeof(reserved), 1) != 1) return false;
+  // Arbitrarily limit the number of elements to protect against bad data.
+  const uint32_t limit = 50000000;
+  assert(reserved <= limit);
+  if (reserved > limit) return false;
   reserve(reserved);
   size_used_ = reserved;
   return fp->FReadEndian(data_, sizeof(T), size_used_) == size_used_;
 }
 template <typename T>
 bool GenericVector<T>::SkipDeSerialize(tesseract::TFile* fp) {
-  int32_t reserved;
+  uint32_t reserved;
   if (fp->FReadEndian(&reserved, sizeof(reserved), 1) != 1) return false;
   return fp->FRead(nullptr, sizeof(T), reserved) == reserved;
 }

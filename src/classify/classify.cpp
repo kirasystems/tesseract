@@ -16,12 +16,37 @@
 //
 ///////////////////////////////////////////////////////////////////////
 
-// Include automatically generated configuration file if running autoconf.
-#ifdef HAVE_CONFIG_H
-#include "config_auto.h"
-#endif
-
 #include "classify.h"
+
+#ifdef DISABLED_LEGACY_ENGINE
+
+#include <string.h>
+
+namespace tesseract {
+
+Classify::Classify()
+    :
+      INT_MEMBER(classify_debug_level, 0, "Classify debug level",
+                 this->params()),
+
+      BOOL_MEMBER(classify_bln_numeric_mode, 0,
+"Assume the input is numbers [0-9].", this->params()),
+
+      double_MEMBER(classify_max_rating_ratio, 1.5,
+                    "Veto ratio between classifier ratings", this->params()),
+
+      double_MEMBER(classify_max_certainty_margin, 5.5,
+                    "Veto difference between classifier certainties",
+                    this->params()),
+
+      dict_(this) {}
+
+Classify::~Classify() {}
+
+}  // namespace tesseract
+
+#else  // DISABLED_LEGACY_ENGINE not defined
+
 #include "fontinfo.h"
 #include "intproto.h"
 #include "mfoutline.h"
@@ -29,7 +54,7 @@
 #include "shapeclassifier.h"
 #include "shapetable.h"
 #include "unicity_table.h"
-#include <string.h>
+#include <cstring>
 
 namespace tesseract {
 Classify::Classify()
@@ -159,6 +184,7 @@ Classify::Classify()
                     this->params()),
       double_MEMBER(speckle_rating_penalty, 10.0,
                     "Penalty to add to worst rating for noise", this->params()),
+      im_(&classify_debug_level),
       shape_table_(nullptr),
       dict_(this),
       static_classifier_(nullptr) {
@@ -221,7 +247,7 @@ void Classify::AddLargeSpeckleTo(int blob_length, BLOB_CHOICE_LIST *choices) {
         (rating_scale * blob_length);
   }
   BLOB_CHOICE* blob_choice = new BLOB_CHOICE(UNICHAR_SPACE, rating, certainty,
-                                             -1, 0.0f, MAX_FLOAT32, 0,
+                                             -1, 0.0f, FLT_MAX, 0,
                                              BCC_SPECKLE_CLASSIFIER);
   bc_it.add_to_end(blob_choice);
 }
@@ -233,5 +259,6 @@ bool Classify::LargeSpeckle(const TBLOB &blob) {
   return bbox.width() < speckle_size && bbox.height() < speckle_size;
 }
 
-
 }  // namespace tesseract
+
+#endif  // def DISABLED_LEGACY_ENGINE

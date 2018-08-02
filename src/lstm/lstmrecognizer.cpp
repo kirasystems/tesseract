@@ -36,14 +36,11 @@
 #include "ratngs.h"
 #include "recodebeam.h"
 #include "scrollview.h"
-#include "shapetable.h"
 #include "statistc.h"
 #include "tprintf.h"
 
 namespace tesseract {
 
-// Max number of blob choices to return in any given position.
-const int kMaxChoices = 4;
 // Default ratio between dict and non-dict words.
 const double kDictRatio = 2.25;
 // Default certainty offset to give the dictionary a chance.
@@ -87,16 +84,13 @@ bool LSTMRecognizer::Serialize(const TessdataManager* mgr, TFile* fp) const {
   if (!network_->Serialize(fp)) return false;
   if (include_charsets && !GetUnicharset().save_to_file(fp)) return false;
   if (!network_str_.Serialize(fp)) return false;
-  if (fp->FWrite(&training_flags_, sizeof(training_flags_), 1) != 1)
-    return false;
-  if (fp->FWrite(&training_iteration_, sizeof(training_iteration_), 1) != 1)
-    return false;
-  if (fp->FWrite(&sample_iteration_, sizeof(sample_iteration_), 1) != 1)
-    return false;
-  if (fp->FWrite(&null_char_, sizeof(null_char_), 1) != 1) return false;
-  if (fp->FWrite(&adam_beta_, sizeof(adam_beta_), 1) != 1) return false;
-  if (fp->FWrite(&learning_rate_, sizeof(learning_rate_), 1) != 1) return false;
-  if (fp->FWrite(&momentum_, sizeof(momentum_), 1) != 1) return false;
+  if (!fp->Serialize(&training_flags_)) return false;
+  if (!fp->Serialize(&training_iteration_)) return false;
+  if (!fp->Serialize(&sample_iteration_)) return false;
+  if (!fp->Serialize(&null_char_)) return false;
+  if (!fp->Serialize(&adam_beta_)) return false;
+  if (!fp->Serialize(&learning_rate_)) return false;
+  if (!fp->Serialize(&momentum_)) return false;
   if (include_charsets && IsRecoding() && !recoder_.Serialize(fp)) return false;
   return true;
 }
@@ -112,18 +106,13 @@ bool LSTMRecognizer::DeSerialize(const TessdataManager* mgr, TFile* fp) {
   if (include_charsets && !ccutil_.unicharset.load_from_file(fp, false))
     return false;
   if (!network_str_.DeSerialize(fp)) return false;
-  if (fp->FReadEndian(&training_flags_, sizeof(training_flags_), 1) != 1)
-    return false;
-  if (fp->FReadEndian(&training_iteration_, sizeof(training_iteration_), 1) !=
-      1)
-    return false;
-  if (fp->FReadEndian(&sample_iteration_, sizeof(sample_iteration_), 1) != 1)
-    return false;
-  if (fp->FReadEndian(&null_char_, sizeof(null_char_), 1) != 1) return false;
-  if (fp->FReadEndian(&adam_beta_, sizeof(adam_beta_), 1) != 1) return false;
-  if (fp->FReadEndian(&learning_rate_, sizeof(learning_rate_), 1) != 1)
-    return false;
-  if (fp->FReadEndian(&momentum_, sizeof(momentum_), 1) != 1) return false;
+  if (!fp->DeSerialize(&training_flags_)) return false;
+  if (!fp->DeSerialize(&training_iteration_)) return false;
+  if (!fp->DeSerialize(&sample_iteration_)) return false;
+  if (!fp->DeSerialize(&null_char_)) return false;
+  if (!fp->DeSerialize(&adam_beta_)) return false;
+  if (!fp->DeSerialize(&learning_rate_)) return false;
+  if (!fp->DeSerialize(&momentum_)) return false;
   if (include_charsets && !LoadRecoder(fp)) return false;
   if (!include_charsets && !LoadCharsets(mgr)) return false;
   network_->SetRandomizer(&randomizer_);
@@ -183,7 +172,7 @@ bool LSTMRecognizer::LoadDictionary(const char* lang, TessdataManager* mgr) {
 void LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
                                    bool debug, double worst_dict_cert,
                                    const TBOX& line_box,
-                                   PointerVector<WERD_RES>* words) {
+                                   PointerVector<WERD_RES>* words, bool glyph_confidences) {
   NetworkIO outputs;
   float scale_factor;
   NetworkIO inputs;
@@ -194,9 +183,11 @@ void LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
     search_ =
         new RecodeBeamSearch(recoder_, null_char_, SimpleTextOutput(), dict_);
   }
-  search_->Decode(outputs, kDictRatio, kCertOffset, worst_dict_cert, nullptr);
+  search_->Decode(outputs, kDictRatio, kCertOffset, worst_dict_cert,
+                  &GetUnicharset(), glyph_confidences);
   search_->ExtractBestPathAsWords(line_box, scale_factor, debug,
-                                  &GetUnicharset(), words);
+                                  &GetUnicharset(), words,
+                                  glyph_confidences);
 }
 
 // Helper computes min and mean best results in the output.
@@ -409,6 +400,7 @@ void LSTMRecognizer::DebugActivationRange(const NetworkIO& outputs,
 // Helper returns true if the null_char is the winner at t, and it beats the
 // null_threshold, or the next choice is space, in which case we will use the
 // null anyway.
+#if 0 // TODO: unused, remove if still unused after 2020.
 static bool NullIsBest(const NetworkIO& output, float null_thr,
                        int null_char, int t) {
   if (output.f(t)[null_char] >= null_thr) return true;
@@ -416,6 +408,7 @@ static bool NullIsBest(const NetworkIO& output, float null_thr,
     return false;
   return output.f(t)[null_char] > output.f(t)[UNICHAR_SPACE];
 }
+#endif
 
 // Converts the network output to a sequence of labels. Outputs labels, scores
 // and start xcoords of each char, and each null_char_, with an additional

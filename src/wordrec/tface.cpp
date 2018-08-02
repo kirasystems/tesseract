@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        tface.cpp  (Formerly tface.c)
  * Description: C side of the Tess/tessedit C/C++ interface.
- * Author:		Ray Smith
- * Created:		Mon Apr 27 11:57:06 BST 1992
+ * Author:      Ray Smith
+ * Created:     Mon Apr 27 11:57:06 BST 1992
  *
  * (C) Copyright 1992, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@
 #include "callcpp.h"
 #include "chop.h"
 #include "chopper.h"
-#include "danerror.h"
 #include "globals.h"
 #include "gradechop.h"
 #include "pageres.h"
@@ -47,6 +46,7 @@ void Wordrec::program_editup(const char *textbase,
                              TessdataManager *init_classifier,
                              TessdataManager *init_dict) {
   if (textbase != nullptr) imagefile = textbase;
+#ifndef DISABLED_LEGACY_ENGINE
   InitFeatureDefs(&feature_defs_);
   InitAdaptiveClassifier(init_classifier);
   if (init_dict) {
@@ -55,7 +55,9 @@ void Wordrec::program_editup(const char *textbase,
     getDict().FinishLoad();
   }
   pass2_ok_split = chop_ok_split;
+#endif  // ndef DISABLED_LEGACY_ENGINE
 }
+
 
 /**
  * @name end_recog
@@ -76,11 +78,14 @@ int Wordrec::end_recog() {
  * program.
  */
 void Wordrec::program_editdown(int32_t elasped_time) {
+#ifndef DISABLED_LEGACY_ENGINE
   EndAdaptiveClassifier();
+#endif  // ndef DISABLED_LEGACY_ENGINE
   getDict().End();
 }
 
 
+#ifndef DISABLED_LEGACY_ENGINE
 /**
  * @name set_pass1
  *
@@ -117,6 +122,7 @@ void Wordrec::cc_recog(WERD_RES *word) {
                          getDict().word_to_debug.string());
   ASSERT_HOST(word->StatesAllValid());
 }
+#endif  // ndef DISABLED_LEGACY_ENGINE
 
 
 /**
@@ -129,6 +135,8 @@ int Wordrec::dict_word(const WERD_CHOICE &word) {
   return getDict().valid_word(word);
 }
 
+
+#ifndef DISABLED_LEGACY_ENGINE
 /**
  * @name call_matcher
  *
@@ -148,6 +156,6 @@ BLOB_CHOICE_LIST *Wordrec::call_matcher(TBLOB *tessblob) {
   }
   return ratings;
 }
-
+#endif  // ndef DISABLED_LEGACY_ENGINE
 
 }  // namespace tesseract

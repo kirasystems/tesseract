@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        stepblob.cpp  (Formerly cblob.c)
  * Description: Code for C_BLOB class.
- * Author:		Ray Smith
- * Created:		Tue Oct 08 10:41:13 BST 1991
+ * Author:      Ray Smith
+ * Created:     Tue Oct 08 10:41:13 BST 1991
  *
  * (C) Copyright 1991, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,18 @@
  *
  **********************************************************************/
 
-#include "stepblob.h"
-#include "allheaders.h"
-
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H
 #include "config_auto.h"
 #endif
+
+#include "stepblob.h"
+#include "allheaders.h"     // for pixCreate, pixGetDepth
+#include "genericvector.h"  // for GenericVector
+#include "host.h"           // for TRUE, FALSE
+#include "ipoints.h"        // for operator+=
+
+class DENORM;
 
 // Max perimeter to width ratio for a baseline position above box bottom.
 const double kMaxPerimeterWidthRatio = 8.0;
@@ -359,7 +364,8 @@ void C_BLOB::move(                  // reposition blob
 }
 
 // Static helper for C_BLOB::rotate to allow recursion of child outlines.
-void RotateOutlineList(const FCOORD& rotation, C_OUTLINE_LIST* outlines) {
+static void RotateOutlineList(const FCOORD& rotation,
+                              C_OUTLINE_LIST* outlines) {
   C_OUTLINE_LIST new_outlines;
   C_OUTLINE_IT src_it(outlines);
   C_OUTLINE_IT dest_it(&new_outlines);

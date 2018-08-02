@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        stepblob.h  (Formerly cblob.h)
  * Description: Code for C_BLOB class.
- * Author:		Ray Smith
- * Created:		Tue Oct 08 10:41:13 BST 1991
+ * Author:      Ray Smith
+ * Created:     Tue Oct 08 10:41:13 BST 1991
  *
  * (C) Copyright 1991, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,21 @@
  *
  **********************************************************************/
 
-#ifndef           STEPBLOB_H
-#define           STEPBLOB_H
+#ifndef STEPBLOB_H
+#define STEPBLOB_H
 
-#include          "coutln.h"
-#include          "rect.h"
+#include <cstdint>             // for int32_t, int16_t
+#include "coutln.h"            // for C_OUTLINE_LIST, C_OUTLINE
+#include "elst.h"              // for ELIST_ITERATOR, ELISTIZEH, ELIST_LINK
+#include "points.h"            // for FCOORD, ICOORD (ptr only)
+#include "rect.h"              // for TBOX
+#include "scrollview.h"        // for ScrollView, ScrollView::Color
 
 class C_BLOB;
+class DENORM;
+
 struct Pix;
+
 ELISTIZEH(C_BLOB)
 
 class C_BLOB:public ELIST_LINK

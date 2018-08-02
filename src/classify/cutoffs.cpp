@@ -23,10 +23,8 @@
 #include <cstdio>
 
 #include "classify.h"
-#include "efio.h"
 #include "globals.h"
 #include "helpers.h"
-#include "scanutils.h"
 #include "serialis.h"
 #include "unichar.h"
 
@@ -44,8 +42,6 @@ namespace tesseract {
  * @param Cutoffs array to put cutoffs into
  * @return none
  * @note Globals: none
- * @note Exceptions: none
- * @note History: Wed Feb 20 09:38:26 1991, DSJ, Created.
  */
 void Classify::ReadNewCutoffs(TFile* fp, CLASS_CUTOFF_ARRAY Cutoffs) {
   char Class[UNICHAR_LEN + 1];

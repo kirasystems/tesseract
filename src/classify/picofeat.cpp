@@ -21,7 +21,6 @@
 #include "picofeat.h"
 
 #include "classify.h"
-#include "efio.h"
 #include "featdefs.h"
 #include "fpoint.h"
 #include "mfoutline.h"
@@ -61,15 +60,13 @@ namespace tesseract {
  * - classify_norm_method normalization method currently specified
  * @param Blob blob to extract pico-features from
  * @return Pico-features for Blob.
- * @note Exceptions: none
- * @note History: 9/4/90, DSJ, Created.
  */
 FEATURE_SET Classify::ExtractPicoFeatures(TBLOB *Blob) {
   LIST Outlines;
   LIST RemainingOutlines;
   MFOUTLINE Outline;
   FEATURE_SET FeatureSet;
-  FLOAT32 XScale, YScale;
+  float XScale, YScale;
 
   FeatureSet = NewFeatureSet(MAX_PICO_FEATURES);
   Outlines = ConvertBlob(Blob);
@@ -103,15 +100,13 @@ FEATURE_SET Classify::ExtractPicoFeatures(TBLOB *Blob) {
  * @param End ending point of pico-feature
  * @param FeatureSet set to add pico-feature to
  * @return none (results are placed in FeatureSet)
- * @note Exceptions: none
- * @note History: Tue Apr 30 15:44:34 1991, DSJ, Created.
  */
 void ConvertSegmentToPicoFeat(FPOINT *Start,
                               FPOINT *End,
                               FEATURE_SET FeatureSet) {
   FEATURE Feature;
-  FLOAT32 Angle;
-  FLOAT32 Length;
+  float Angle;
+  float Length;
   int NumFeatures;
   FPOINT Center;
   FPOINT Delta;
@@ -157,8 +152,6 @@ void ConvertSegmentToPicoFeat(FPOINT *Start,
  * @param Outline outline to extract micro-features from
  * @param FeatureSet set of features to add pico-features to
  * @return none (results are returned in FeatureSet)
- * @note Exceptions: none
- * @note History: 4/30/91, DSJ, Adapted from ConvertToPicoFeatures().
  */
 void ConvertToPicoFeatures2(MFOUTLINE Outline, FEATURE_SET FeatureSet) {
   MFOUTLINE Next;
@@ -198,13 +191,11 @@ void ConvertToPicoFeatures2(MFOUTLINE Outline, FEATURE_SET FeatureSet) {
  * @param FeatureSet pico-features to be normalized
  * @return none (FeatureSet is changed)
  * @note Globals: none
- * @note Exceptions: none
- * @note History: Tue Sep  4 16:50:08 1990, DSJ, Created.
  */
 void NormalizePicoX(FEATURE_SET FeatureSet) {
   int i;
   FEATURE Feature;
-  FLOAT32 Origin = 0.0;
+  float Origin = 0.0;
 
   for (i = 0; i < FeatureSet->NumFeatures; i++) {
     Feature = FeatureSet->Features[i];
@@ -224,8 +215,6 @@ namespace tesseract {
  * @param blob blob to extract features from
  * @param fx_info
  * @return Integer character-normalized features for blob.
- * @note Exceptions: none
- * @note History: 8/8/2011, rays, Created.
  */
 FEATURE_SET Classify::ExtractIntCNFeatures(
     const TBLOB& blob, const INT_FX_RESULT_STRUCT& fx_info) {
@@ -235,10 +224,10 @@ FEATURE_SET Classify::ExtractIntCNFeatures(
       blob, false, &local_fx_info, &bl_features);
   if (sample == nullptr) return nullptr;
 
-  int num_features = sample->num_features();
+  uint32_t num_features = sample->num_features();
   const INT_FEATURE_STRUCT* features = sample->features();
   FEATURE_SET feature_set = NewFeatureSet(num_features);
-  for (int f = 0; f < num_features; ++f) {
+  for (uint32_t f = 0; f < num_features; ++f) {
     FEATURE feature = NewFeature(&IntFeatDesc);
 
     feature->Params[IntX] = features[f].X;
@@ -256,8 +245,6 @@ FEATURE_SET Classify::ExtractIntCNFeatures(
  * @param blob blob to extract features from
  * @param fx_info
  * @return Geometric (top/bottom/width) features for blob.
- * @note Exceptions: none
- * @note History: 8/8/2011, rays, Created.
  */
 FEATURE_SET Classify::ExtractIntGeoFeatures(
     const TBLOB& blob, const INT_FX_RESULT_STRUCT& fx_info) {

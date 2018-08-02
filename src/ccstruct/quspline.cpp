@@ -1,8 +1,7 @@
 /**********************************************************************
  * File:        quspline.cpp  (Formerly qspline.c)
  * Description: Code for the QSPLINE class.
- * Author:  Ray Smith
- * Created: Tue Oct 08 17:16:12 BST 1991
+ * Author:      Ray Smith
  *
  * (C) Copyright 1991, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +16,12 @@
  *
  **********************************************************************/
 
-#include "allheaders.h"
-#include "memry.h"
-#include "quadlsq.h"
 #include "quspline.h"
+#include "allheaders.h"  // for pixRenderPolyline, pixGetDepth, pixGetHeight
+#include "pix.h"         // for L_CLEAR_PIXELS, L_SET_PIXELS, Pix (ptr only)
+#include "points.h"      // for ICOORD
+#include "quadlsq.h"     // for QLSQ
+#include "quadratc.h"    // for QUAD_COEFFS
 
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H
@@ -43,8 +44,8 @@ QSPLINE::QSPLINE(                 //constructor
   int32_t index;                   //segment index
 
                                  //get memory
-  xcoords = (int32_t *) alloc_mem ((count + 1) * sizeof (int32_t));
-  quadratics = (QUAD_COEFFS *) alloc_mem (count * sizeof (QUAD_COEFFS));
+  xcoords = new int32_t[count + 1];
+  quadratics = new QUAD_COEFFS[count];
   segments = count;
   for (index = 0; index < segments; index++) {
                                  //copy them
@@ -77,9 +78,9 @@ int degree                       //fit required
   QLSQ qlsq;                     /*accumulator */
 
   segments = segcount;
-  xcoords = (int32_t *) alloc_mem ((segcount + 1) * sizeof (int32_t));
-  ptcounts = (int32_t *) alloc_mem ((segcount + 1) * sizeof (int32_t));
-  quadratics = (QUAD_COEFFS *) alloc_mem (segcount * sizeof (QUAD_COEFFS));
+  xcoords = new int32_t[segcount + 1];
+  ptcounts = new int32_t[segcount + 1];
+  quadratics = new QUAD_COEFFS[segcount];
   memmove (xcoords, xstarts, (segcount + 1) * sizeof (int32_t));
   ptcounts[0] = 0;               /*none in any yet */
   for (segment = 0, pointindex = 0; pointindex < pointcount; pointindex++) {
@@ -123,7 +124,7 @@ int degree                       //fit required
     quadratics[segment].b = qlsq.get_b ();
     quadratics[segment].c = qlsq.get_c ();
   }
-  free_mem(ptcounts);
+  delete[] ptcounts;
 }
 
 
@@ -148,16 +149,9 @@ QSPLINE::QSPLINE(  //constructor
  * Destroy a QSPLINE.
  **********************************************************************/
 
-QSPLINE::~QSPLINE (              //constructor
-) {
-  if (xcoords != nullptr) {
-    free_mem(xcoords);
-    xcoords = nullptr;
-  }
-  if (quadratics != nullptr) {
-    free_mem(quadratics);
-    quadratics = nullptr;
-  }
+QSPLINE::~QSPLINE () {
+  delete[] xcoords;
+  delete[] quadratics;
 }
 
 
@@ -169,14 +163,12 @@ QSPLINE::~QSPLINE (              //constructor
 
 QSPLINE & QSPLINE::operator= (   //assignment
 const QSPLINE & source) {
-  if (xcoords != nullptr)
-    free_mem(xcoords);
-  if (quadratics != nullptr)
-    free_mem(quadratics);
+  delete[] xcoords;
+  delete[] quadratics;
 
   segments = source.segments;
-  xcoords = (int32_t *) alloc_mem ((segments + 1) * sizeof (int32_t));
-  quadratics = (QUAD_COEFFS *) alloc_mem (segments * sizeof (QUAD_COEFFS));
+  xcoords = new int32_t[segments + 1];
+  quadratics = new QUAD_COEFFS[segments];
   memmove (xcoords, source.xcoords, (segments + 1) * sizeof (int32_t));
   memmove (quadratics, source.quadratics, segments * sizeof (QUAD_COEFFS));
   return *this;
@@ -303,7 +295,7 @@ void QSPLINE::extrapolate(                  //linear extrapolation
                          ) {
   int segment;                   /*current segment of spline */
   int dest_segment;              //dest index
-  int *xstarts;                  //new boundaries
+  int32_t* xstarts;              //new boundaries
   QUAD_COEFFS *quads;            //new ones
   int increment;                 //in size
 
@@ -312,9 +304,8 @@ void QSPLINE::extrapolate(                  //linear extrapolation
     increment++;
   if (increment == 0)
     return;
-  xstarts = (int *) alloc_mem ((segments + 1 + increment) * sizeof (int));
-  quads =
-    (QUAD_COEFFS *) alloc_mem ((segments + increment) * sizeof (QUAD_COEFFS));
+  xstarts = new int32_t[segments + 1 + increment];
+  quads = new QUAD_COEFFS[segments + increment];
   if (xmin < xcoords[0]) {
     xstarts[0] = xmin;
     quads[0].a = 0;
@@ -339,9 +330,9 @@ void QSPLINE::extrapolate(                  //linear extrapolation
     xstarts[dest_segment] = xmax + 1;
   }
   segments = dest_segment;
-  free_mem(xcoords);
-  free_mem(quadratics);
-  xcoords = (int32_t *) xstarts;
+  delete[] xcoords;
+  delete[] quadratics;
+  xcoords = xstarts;
   quadratics = quads;
 }
 

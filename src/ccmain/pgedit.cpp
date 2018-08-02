@@ -114,7 +114,7 @@ CMD_EVENTS mode = CHANGE_DISP_CMD_EVENT;  // selected words op
 bool recog_done = false;                  // recog_all_words was called
 
 // These variables should remain global, since they are only used for the
-// debug mode (in which only a single Tesseract thread/instance will be exist).
+// debug mode (in which only a single Tesseract thread/instance will exist).
 BITS16 word_display_mode;
 static ColorationMode color_mode = CM_RAINBOW;
 BOOL8 display_image = FALSE;
@@ -203,12 +203,9 @@ void build_image_window(int width, int height) {
  *  Display normalized baseline, x-height, ascender limit and descender limit
  */
 
-void display_bln_lines(ScrollView* window,
-                       ScrollView::Color colour,
-                       float scale_factor,
-                       float y_offset,
-                       float minx,
-                       float maxx) {
+static void display_bln_lines(ScrollView* window, ScrollView::Color colour,
+                              float scale_factor, float y_offset,
+                              float minx, float maxx) {
   window->Pen(colour);
   window->Line(minx, y_offset + scale_factor * DESC_HEIGHT,
                maxx, y_offset + scale_factor * DESC_HEIGHT);
@@ -420,6 +417,8 @@ bool Tesseract::process_cmd_win_event(                 // UI command semantics
       break;
   }
 
+  char* parameter;
+
   switch (cmd_event) {
     case NULL_CMD_EVENT:
       break;
@@ -435,7 +434,9 @@ bool Tesseract::process_cmd_win_event(                 // UI command semantics
       break;
     case DEBUG_WERD_CMD_EVENT:
       mode = DEBUG_WERD_CMD_EVENT;
-      word_config_ = image_win->ShowInputDialog("Config File Name");
+      parameter = image_win->ShowInputDialog("Config File Name");
+      word_config_ = parameter;
+      delete[] parameter;
       break;
     case BOUNDING_BOX_CMD_EVENT:
       if (new_value[0] == 'T')
@@ -606,10 +607,12 @@ void Tesseract::process_image_event( // action in image win
           break;                 // ignore up event
 
         case RECOG_WERDS:
+        #ifndef DISABLED_LEGACY_ENGINE
           image_win->AddMessage("Recogging selected words");
           this->process_selected_words(current_page_res,
                                        selection_box,
                                        &Tesseract::recog_interactive);
+        #endif  // ndef DISABLED_LEGACY_ENGINE
           break;
         case RECOG_PSEUDO:
           image_win->AddMessage("Recogging selected blobs");
@@ -635,7 +638,9 @@ void Tesseract::process_image_event( // action in image win
  * Process the whole image, but load word_config_ for the selected word(s).
  */
 void Tesseract::debug_word(PAGE_RES* page_res, const TBOX &selection_box) {
+#ifndef DISABLED_LEGACY_ENGINE
   ResetAdaptiveClassifier();
+#endif
   recog_all_words(page_res, nullptr, &selection_box, word_config_.string(), 0);
 }
 }  // namespace tesseract
@@ -761,7 +766,6 @@ bool Tesseract::word_display(PAGE_RES_IT* pr_it) {
   int word_height;               // ht of word BB
   bool displayed_something = false;
   float shift;                   // from bot left
-  C_BLOB_IT c_it;                // cblob iterator
 
   if (color_mode != CM_RAINBOW && word_res->box_word != nullptr) {
     BoxWord* box_word = word_res->box_word;
@@ -830,7 +834,8 @@ bool Tesseract::word_display(PAGE_RES_IT* pr_it) {
     ScrollView::Color c = (ScrollView::Color)
        ((int32_t) editor_image_blob_bb_color);
     image_win->Pen(c);
-    c_it.set_to_list(word->cblob_list());
+    // cblob iterator
+    C_BLOB_IT c_it(word->cblob_list());
     for (c_it.mark_cycle_pt(); !c_it.cycled_list(); c_it.forward())
       c_it.data()->bounding_box().plot(image_win);
     displayed_something = true;
@@ -951,10 +956,12 @@ bool Tesseract::word_set_display(PAGE_RES_IT* pr_it) {
   return word_display(pr_it);
 }
 
+
 // page_res is non-const because the iterator doesn't know if you are going
 // to change the items it points to! Really a const here though.
 void Tesseract::blob_feature_display(PAGE_RES* page_res,
                                      const TBOX& selection_box) {
+#ifndef DISABLED_LEGACY_ENGINE
   PAGE_RES_IT* it = make_pseudo_word(page_res, selection_box);
   if (it != nullptr) {
     WERD_RES* word_res = it->word();
@@ -988,6 +995,7 @@ void Tesseract::blob_feature_display(PAGE_RES* page_res,
     it->DeleteCurrentWord();
     delete it;
   }
+#endif  // ndef DISABLED_LEGACY_ENGINE
 }
 
 

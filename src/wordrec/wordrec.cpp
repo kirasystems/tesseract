@@ -18,6 +18,27 @@
 
 #include "wordrec.h"
 
+#ifdef DISABLED_LEGACY_ENGINE
+
+#include "params.h"
+
+
+namespace tesseract {
+Wordrec::Wordrec() :
+  // control parameters
+
+  BOOL_MEMBER(wordrec_debug_blamer, false,
+              "Print blamer debug messages", params()),
+
+  BOOL_MEMBER(wordrec_run_blamer, false,
+              "Try to set the blame for errors", params()) {
+  prev_word_best_choice_ = nullptr;
+}
+
+}  // namespace tesseract
+
+#else  // DISABLED_LEGACY_ENGINE not defined
+
 #include "language_model.h"
 #include "params.h"
 
@@ -113,7 +134,8 @@ Wordrec::Wordrec() :
   BOOL_MEMBER(save_alt_choices, true,
               "Save alternative paths found during chopping"
               " and segmentation search",
-              params()) {
+              params()),
+  pass2_ok_split(0.0f) {
   prev_word_best_choice_ = nullptr;
   language_model_.reset(new LanguageModel(&get_fontinfo_table(),
                                       &(getDict())));
@@ -121,3 +143,5 @@ Wordrec::Wordrec() :
 }
 
 }  // namespace tesseract
+
+#endif  // DISABLED_LEGACY_ENGINE

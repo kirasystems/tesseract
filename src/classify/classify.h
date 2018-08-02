@@ -19,9 +19,51 @@
 #ifndef TESSERACT_CLASSIFY_CLASSIFY_H_
 #define TESSERACT_CLASSIFY_CLASSIFY_H_
 
+// Include automatically generated configuration file if running autoconf.
+#ifdef HAVE_CONFIG_H
+#include "config_auto.h"
+#endif
+
+
+#ifdef DISABLED_LEGACY_ENGINE
+
+#include "ccstruct.h"
+#include "dict.h"
+
+namespace tesseract {
+
+class Classify : public CCStruct {
+ public:
+  Classify();
+  virtual ~Classify();
+  virtual Dict& getDict() {
+    return dict_;
+  }
+
+  // Member variables.
+
+  INT_VAR_H(classify_debug_level, 0, "Classify debug level");
+
+  BOOL_VAR_H(classify_bln_numeric_mode, 0,
+             "Assume the input is numbers [0-9].");
+
+  double_VAR_H(classify_max_rating_ratio, 1.5,
+               "Veto ratio between classifier ratings");
+
+  double_VAR_H(classify_max_certainty_margin, 5.5,
+               "Veto difference between classifier certainties");
+
+ private:
+  Dict dict_;
+};
+
+}  // namespace tesseract
+
+
+#else  // DISABLED_LEGACY_ENGINE not defined
+
 #include "adaptive.h"
 #include "ccstruct.h"
-#include "classify.h"
 #include "dict.h"
 #include "featdefs.h"
 #include "fontinfo.h"
@@ -108,8 +150,8 @@ class Classify : public CCStruct {
   void WriteAdaptedTemplates(FILE *File, ADAPT_TEMPLATES Templates);
   ADAPT_TEMPLATES ReadAdaptedTemplates(TFile* File);
   /* normmatch.cpp ************************************************************/
-  FLOAT32 ComputeNormMatch(CLASS_ID ClassId,
-                           const FEATURE_STRUCT& feature, bool DebugMatch);
+  float ComputeNormMatch(CLASS_ID ClassId,
+                         const FEATURE_STRUCT& feature, bool DebugMatch);
   void FreeNormProtos();
   NORM_PROTOS* ReadNormProtos(TFile* fp);
   /* protos.cpp ***************************************************************/
@@ -214,7 +256,7 @@ class Classify : public CCStruct {
   void PrintAdaptiveMatchResults(const ADAPT_RESULTS& results);
   void RemoveExtraPuncs(ADAPT_RESULTS *Results);
   void RemoveBadMatches(ADAPT_RESULTS *Results);
-  void SetAdaptiveThreshold(FLOAT32 Threshold);
+  void SetAdaptiveThreshold(float Threshold);
   void ShowBestMatchFor(int shape_id,
                         const INT_FEATURE_STRUCT* features,
                         int num_features);
@@ -253,7 +295,7 @@ class Classify : public CCStruct {
   UNICHAR_ID *GetAmbiguities(TBLOB *Blob, CLASS_ID CorrectClass);
   void DoAdaptiveMatch(TBLOB *Blob, ADAPT_RESULTS *Results);
   void AdaptToChar(TBLOB* Blob, CLASS_ID ClassId, int FontinfoId,
-                   FLOAT32 Threshold, ADAPT_TEMPLATES adaptive_templates);
+                   float Threshold, ADAPT_TEMPLATES adaptive_templates);
   void DisplayAdaptedChar(TBLOB* blob, INT_CLASS_STRUCT* int_class);
   bool AdaptableWord(WERD_RES* word);
   void EndAdaptiveClassifier();
@@ -351,7 +393,7 @@ class Classify : public CCStruct {
     return fontset_table_;
   }
   /* mfoutline.cpp ***********************************************************/
-  void NormalizeOutlines(LIST Outlines, FLOAT32 *XScale, FLOAT32 *YScale);
+  void NormalizeOutlines(LIST Outlines, float *XScale, float *YScale);
   /* outfeat.cpp ***********************************************************/
   FEATURE_SET ExtractOutlineFeatures(TBLOB *Blob);
   /* picofeat.cpp ***********************************************************/
@@ -537,5 +579,7 @@ class Classify : public CCStruct {
   ScrollView* learn_fragments_debug_win_;
 };
 }  // namespace tesseract
+
+#endif  // DISABLED_LEGACY_ENGINE
 
 #endif  // TESSERACT_CLASSIFY_CLASSIFY_H_

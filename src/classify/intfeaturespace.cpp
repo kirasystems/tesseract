@@ -44,19 +44,6 @@ bool IntFeatureSpace::Serialize(FILE* fp) const {
   return true;
 }
 
-// DeSerializes the feature space definition from the given file.
-// If swap is true, the data is big/little-endian swapped.
-// Returns false on error.
-bool IntFeatureSpace::DeSerialize(bool swap, FILE* fp) {
-  if (fread(&x_buckets_, sizeof(x_buckets_), 1, fp) != 1)
-    return false;
-  if (fread(&y_buckets_, sizeof(y_buckets_), 1, fp) != 1)
-    return false;
-  if (fread(&theta_buckets_, sizeof(theta_buckets_), 1, fp) != 1)
-    return false;
-  return true;
-}
-
 // Returns an INT_FEATURE_STRUCT corresponding to the given index.
 // This is the inverse of the Index member.
 INT_FEATURE_STRUCT IntFeatureSpace::PositionFromIndex(int index) const {
@@ -107,8 +94,8 @@ int IntFeatureSpace::XYToFeatureIndex(int x, int y) const {
   x -= feature.X;
   y -= feature.Y;
   if (x != 0 || y != 0) {
-    double angle = atan2(static_cast<double>(y), static_cast<double>(x)) + PI;
-    angle *= kIntFeatureExtent / (2.0 * PI);
+    double angle = atan2(static_cast<double>(y), static_cast<double>(x)) + M_PI;
+    angle *= kIntFeatureExtent / (2.0 * M_PI);
     feature.Theta = static_cast<uint8_t>(angle + 0.5);
     index = Index(feature);
     if (index < 0) {

@@ -19,7 +19,7 @@
 #ifndef TESSERACT_ARCH_DOTPRODUCTSSE_H_
 #define TESSERACT_ARCH_DOTPRODUCTSSE_H_
 
-#include "host.h"
+#include <cstdint>      // for int32_t
 
 namespace tesseract {
 

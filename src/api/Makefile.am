@@ -15,12 +15,16 @@ AM_CPPFLAGS += -DLOCALEDIR=\"$(localedir)\" \
 
 AM_CPPFLAGS += $(OPENCL_CPPFLAGS)
 
+if DISABLED_LEGACY_ENGINE
+AM_CPPFLAGS += -DDISABLED_LEGACY_ENGINE
+endif
+
 if VISIBILITY
 AM_CPPFLAGS += -fvisibility=hidden -fvisibility-inlines-hidden
 endif
 
 pkginclude_HEADERS = apitypes.h baseapi.h capi.h renderer.h tess_version.h
-lib_LTLIBRARIES = 
+lib_LTLIBRARIES =
 
 noinst_LTLIBRARIES = libtesseract_api.la
 
@@ -52,7 +56,7 @@ libtesseract_la_LIBADD = \
     ../cutil/libtesseract_cutil.la \
     ../viewer/libtesseract_viewer.la \
     ../ccutil/libtesseract_ccutil.la \
-    ../opencl/libtesseract_opencl.la 
+    ../opencl/libtesseract_opencl.la
 
 libtesseract_la_LDFLAGS += -version-info $(GENERIC_LIBRARY_VERSION) -no-undefined
 

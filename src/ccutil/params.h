@@ -159,7 +159,7 @@ class IntParam : public Param {
  private:
   int32_t value_;
   int32_t default_;
-  // Pointer to the vector that contains this param (not owened by this class).
+  // Pointer to the vector that contains this param (not owned by this class).
   GenericVector<IntParam *> *params_vec_;
 };
 
@@ -212,7 +212,7 @@ class StringParam : public Param {
  private:
   STRING value_;
   STRING default_;
-  // Pointer to the vector that contains this param (not owened by this class).
+  // Pointer to the vector that contains this param (not owned by this class).
   GenericVector<StringParam *> *params_vec_;
 };
 
@@ -246,8 +246,8 @@ class DoubleParam : public Param {
 //
 // To avoid the problem of undetermined order of static initialization
 // global_params are accessed through the GlobalParams function that
-// initializes the static pointer to global_params only on the first
-// first time GlobalParams() is called.
+// initializes the static pointer to global_params only on the first time
+// GlobalParams() is called.
 //
 // TODO(daria): remove GlobalParams() when all global Tesseract
 // parameters are converted to members.
@@ -284,18 +284,6 @@ tesseract::ParamsVectors *GlobalParams();
 
 #define double_VAR(name,val,comment)\
   tesseract::DoubleParam     name(val,#name,comment,false,GlobalParams())
-
-#define INT_INIT_VAR(name,val,comment)\
-  tesseract::IntParam      name(val,#name,comment,true,GlobalParams())
-
-#define BOOL_INIT_VAR(name,val,comment)\
-  tesseract::BoolParam     name(val,#name,comment,true,GlobalParams())
-
-#define STRING_INIT_VAR(name,val,comment)\
-  tesseract::StringParam     name(val,#name,comment,true,GlobalParams())
-
-#define double_INIT_VAR(name,val,comment)\
-  tesseract::DoubleParam     name(val,#name,comment,true,GlobalParams())
 
 #define INT_MEMBER(name, val, comment, vec)\
   name(val, #name, comment, false, vec)

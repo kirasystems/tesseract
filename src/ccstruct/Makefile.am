@@ -4,7 +4,7 @@ AM_CPPFLAGS += \
     -I$(top_srcdir)/src/viewer \
     -I$(top_srcdir)/src/opencl
 AM_CPPFLAGS += $(OPENCL_CPPFLAGS)
-    
+
 if VISIBILITY
 AM_CPPFLAGS += -DTESS_EXPORTS \
     -fvisibility=hidden -fvisibility-inlines-hidden
@@ -12,8 +12,9 @@ endif
 
 pkginclude_HEADERS = publictypes.h
 noinst_HEADERS = \
-    blamer.h blckerr.h blobbox.h blobs.h blread.h boxread.h boxword.h ccstruct.h coutln.h crakedge.h \
-    debugpixa.h detlinefit.h dppoint.h fontinfo.h genblob.h hpdsizes.h \
+    blamer.h blobbox.h blobs.h blread.h boxread.h boxword.h \
+    ccstruct.h coutln.h crakedge.h \
+    debugpixa.h detlinefit.h dppoint.h fontinfo.h genblob.h \
     imagedata.h \
     ipoints.h \
     linlsq.h matrix.h mod128.h normalis.h \

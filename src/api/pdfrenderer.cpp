@@ -182,9 +182,9 @@ static const int kMaxBytesPerCodepoint = 20;
 
 TessPDFRenderer::TessPDFRenderer(const char *outputbase, const char *datadir,
                                  bool textonly)
-    : TessResultRenderer(outputbase, "pdf") {
+    : TessResultRenderer(outputbase, "pdf"),
+      datadir_(datadir) {
   obj_  = 0;
-  datadir_ = datadir;
   textonly_ = textonly;
   offsets_.push_back(0);
 }
@@ -196,13 +196,13 @@ void TessPDFRenderer::AppendPDFObjectDIY(size_t objectsize) {
 
 void TessPDFRenderer::AppendPDFObject(const char *data) {
   AppendPDFObjectDIY(strlen(data));
-  AppendString((const char *)data);
+  AppendString(data);
 }
 
 // Helper function to prevent us from accidentally writing
 // scientific notation to an HOCR or PDF file. Besides, three
 // decimal points are all you really need.
-double prec(double x) {
+static double prec(double x) {
   double kPrecision = 1000.0;
   double a = round(x * kPrecision) / kPrecision;
   if (a == -0)
@@ -210,7 +210,7 @@ double prec(double x) {
   return a;
 }
 
-long dist2(int x1, int y1, int x2, int y2) {
+static long dist2(int x1, int y1, int x2, int y2) {
   return (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
 }
 
@@ -222,10 +222,10 @@ long dist2(int x1, int y1, int x2, int y2) {
 // left-to-right no matter what the reading order is. We need the
 // word baseline in reading order, so we do that conversion here. Returns
 // the word's baseline origin and length.
-void GetWordBaseline(int writing_direction, int ppi, int height,
-                     int word_x1, int word_y1, int word_x2, int word_y2,
-                     int line_x1, int line_y1, int line_x2, int line_y2,
-                     double *x0, double *y0, double *length) {
+static void GetWordBaseline(int writing_direction, int ppi, int height,
+                            int word_x1, int word_y1, int word_x2, int word_y2,
+                            int line_x1, int line_y1, int line_x2, int line_y2,
+                            double *x0, double *y0, double *length) {
   if (writing_direction == WRITING_DIRECTION_RIGHT_TO_LEFT) {
     Swap(&word_x1, &word_x2);
     Swap(&word_y1, &word_y2);
@@ -264,9 +264,9 @@ void GetWordBaseline(int writing_direction, int ppi, int height,
 //                           RTL
 // [ x' ] = [ a b ][ x ] = [-1 0 ] [ cos sin ][ x ]
 // [ y' ]   [ c d ][ y ]   [ 0 1 ] [-sin cos ][ y ]
-void AffineMatrix(int writing_direction,
-                  int line_x1, int line_y1, int line_x2, int line_y2,
-                  double *a, double *b, double *c, double *d) {
+static void AffineMatrix(int writing_direction,
+                         int line_x1, int line_y1, int line_x2, int line_y2,
+                         double *a, double *b, double *c, double *d) {
   double theta = atan2(static_cast<double>(line_y1 - line_y2),
                        static_cast<double>(line_x2 - line_x1));
   *a = cos(theta);
@@ -293,16 +293,16 @@ void AffineMatrix(int writing_direction,
 // these viewers. I chose this threshold large enough to absorb noise,
 // but small enough that lines probably won't cross each other if the
 // whole page is tilted at almost exactly the clipping threshold.
-void ClipBaseline(int ppi, int x1, int y1, int x2, int y2,
-                  int *line_x1, int *line_y1,
-                  int *line_x2, int *line_y2) {
+static void ClipBaseline(int ppi, int x1, int y1, int x2, int y2,
+                         int *line_x1, int *line_y1,
+                         int *line_x2, int *line_y2) {
   *line_x1 = x1;
   *line_y1 = y1;
   *line_x2 = x2;
   *line_y2 = y2;
-  double rise = abs(y2 - y1) * 72 / ppi;
-  double run = abs(x2 - x1) * 72 / ppi;
-  if (rise < 2.0 && 2.0 < run)
+  int rise = abs(y2 - y1) * 72;
+  int run = abs(x2 - x1) * 72;
+  if (rise < 2 * ppi && 2 * ppi < run)
     *line_y1 = *line_y2 = (y1 + y2) / 2;
 }
 
@@ -654,7 +654,7 @@ bool TessPDFRenderer::BeginDocumentHandler() {
   if (n >= sizeof(buf)) return false;
   AppendPDFObject(buf);
 
-  n = snprintf(buf, sizeof(buf), "%s/pdf.ttf", datadir_);
+  n = snprintf(buf, sizeof(buf), "%s/pdf.ttf", datadir_.c_str());
   if (n >= sizeof(buf)) return false;
   FILE *fp = fopen(buf, "rb");
   if (!fp) {
@@ -669,7 +669,7 @@ bool TessPDFRenderer::BeginDocumentHandler() {
   }
   fseek(fp, 0, SEEK_SET);
   const std::unique_ptr<char[]> buffer(new char[size]);
-  if (fread(buffer.get(), 1, size, fp) != static_cast<size_t>(size)) {
+  if (!tesseract::DeSerialize(fp, buffer.get(), size)) {
     fclose(fp);
     return false;
   }

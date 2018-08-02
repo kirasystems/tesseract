@@ -1,5 +1,3 @@
-// Copyright 2010 Google Inc. All Rights Reserved.
-// Author: rays@google.com (Ray Smith)
 ///////////////////////////////////////////////////////////////////////
 // File:        mastertrainer.cpp
 // Description: Trainer to build the MasterClassifier.
@@ -30,7 +28,6 @@
 #include "allheaders.h"
 #include "boxread.h"
 #include "classify.h"
-#include "efio.h"
 #include "errorcounter.h"
 #include "featdefs.h"
 #include "sampleiterator.h"
@@ -73,7 +70,8 @@ MasterTrainer::~MasterTrainer() {
 // enough data to get the samples back and display them.
 // Writes to the given file. Returns false in case of error.
 bool MasterTrainer::Serialize(FILE* fp) const {
-  if (fwrite(&norm_mode_, sizeof(norm_mode_), 1, fp) != 1) return false;
+  uint32_t value = norm_mode_;
+  if (!tesseract::Serialize(fp, &value)) return false;
   if (!unicharset_.save_to_file(fp)) return false;
   if (!feature_space_.Serialize(fp)) return false;
   if (!samples_.Serialize(fp)) return false;
@@ -121,7 +119,7 @@ void MasterTrainer::ReadTrainingSamples(const char* page_name,
   const int cn_feature_type = ShortNameToFeatureType(feature_defs, kCNFeatureType);
   const int geo_feature_type = ShortNameToFeatureType(feature_defs, kGeoFeatureType);
 
-  FILE* fp = Efopen(page_name, "rb");
+  FILE* fp = fopen(page_name, "rb");
   if (fp == nullptr) {
     tprintf("Failed to open tr file: %s\n", page_name);
     return;
@@ -553,8 +551,8 @@ CLUSTERER* MasterTrainer::SetupForClustering(
   int sample_id = 0;
   for (int i = sample_ptrs.size() - 1; i >= 0; --i) {
     const TrainingSample* sample = sample_ptrs[i];
-    int num_features = sample->num_micro_features();
-    for (int f = 0; f < num_features; ++f)
+    uint32_t num_features = sample->num_micro_features();
+    for (uint32_t f = 0; f < num_features; ++f)
       MakeSample(clusterer, sample->micro_features()[f], sample_id);
     ++sample_id;
   }
@@ -707,7 +705,7 @@ void MasterTrainer::DisplaySamples(const char* unichar_str1, int cloud_font,
   if (class_id2 != INVALID_UNICHAR_ID && canonical_font >= 0) {
     const TrainingSample* sample = samples_.GetCanonicalSample(canonical_font,
                                                                class_id2);
-    for (int f = 0; f < sample->num_features(); ++f) {
+    for (uint32_t f = 0; f < sample->num_features(); ++f) {
       RenderIntFeature(f_window, &sample->features()[f], ScrollView::RED);
     }
   }

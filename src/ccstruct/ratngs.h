@@ -20,7 +20,8 @@
 #ifndef           RATNGS_H
 #define           RATNGS_H
 
-#include <assert.h>
+#include <cassert>
+#include <cfloat>      // for FLT_MAX
 
 #include "clst.h"
 #include "elst.h"
@@ -418,9 +419,9 @@ class WERD_CHOICE : public ELIST_LINK {
     length_ = 0;
     adjust_factor_ = 1.0f;
     rating_ = 0.0;
-    certainty_ = MAX_FLOAT32;
+    certainty_ = FLT_MAX;
     min_x_height_ = 0.0f;
-    max_x_height_ = MAX_FLOAT32;
+    max_x_height_ = FLT_MAX;
     permuter_ = NO_PERM;
     unichars_in_script_order_ = false;  // Tesseract is strict left-to-right.
     dangerous_ambig_found_ = false;
@@ -439,7 +440,7 @@ class WERD_CHOICE : public ELIST_LINK {
   inline void make_bad() {
     length_ = 0;
     rating_ = kBadRating;
-    certainty_ = -MAX_FLOAT32;
+    certainty_ = -FLT_MAX;
   }
 
   /// This function assumes that there is enough space reserved
@@ -551,7 +552,7 @@ class WERD_CHOICE : public ELIST_LINK {
   // to get the target positions. If small_caps is true, sub/super are not
   // considered, but dropcaps are.
   // NOTE: blobs_list should be the chopped_word blobs. (Fully segemented.)
-  void SetScriptPositions(bool small_caps, TWERD* word);
+  void SetScriptPositions(bool small_caps, TWERD* word, int debug = 0);
   // Sets the script_pos_ member from some source positions with a given length.
   void SetScriptPositions(const tesseract::ScriptPos* positions, int length);
   // Sets all the script_pos_ positions to the given position.

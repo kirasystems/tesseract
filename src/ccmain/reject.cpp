@@ -17,28 +17,40 @@
  *
  **********************************************************************/
 
-#include          "tessvars.h"
-#ifdef __UNIX__
-#include          <assert.h>
-#include          <errno.h>
-#endif
-#include          "scanutils.h"
-#include          <ctype.h>
-#include          <string.h>
-#include          "genericvector.h"
-#include          "reject.h"
-#include          "control.h"
-#include          "docqual.h"
-#include          "globaloc.h"  // For err_exit.
-#include          "globals.h"
-#include          "helpers.h"
-
-#include "tesseractclass.h"
-
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H
 #include "config_auto.h"
 #endif
+
+#ifdef DISABLED_LEGACY_ENGINE
+
+#include "tesseractclass.h"
+
+namespace tesseract {
+
+int16_t Tesseract::safe_dict_word(const WERD_RES *werd_res) {
+  const WERD_CHOICE &word = *werd_res->best_choice;
+  int dict_word_type = werd_res->tesseract->dict_word(word);
+  return dict_word_type == DOC_DAWG_PERM ? 0 : dict_word_type;
+}
+}  // namespace tesseract
+
+#else
+
+#include "tessvars.h"
+#include <ctype.h>
+#include <errno.h>
+#include <cstring>
+#include "genericvector.h"
+#include "reject.h"
+#include "control.h"
+#include "docqual.h"
+#include "globaloc.h"  // For err_exit.
+#include "globals.h"
+#include "helpers.h"
+
+#include "tesseractclass.h"
+
 
 CLISTIZEH (STRING) CLISTIZE (STRING)
 
@@ -222,8 +234,6 @@ float compute_reject_threshold(WERD_CHOICE* word) {
   float threshold;               // rejection threshold
   float bestgap = 0.0f;          // biggest gap
   float gapstart;                // bottom of gap
-                                 // super iterator
-  BLOB_CHOICE_IT choice_it;      // real iterator
 
   int blob_count = word->length();
   GenericVector<float> ratings;
@@ -785,3 +795,5 @@ bool Tesseract::non_0_digit(const UNICHARSET& ch_set, UNICHAR_ID unichar_id) {
   return ch_set.get_isdigit(unichar_id) && !ch_set.eq(unichar_id, "0");
 }
 }  // namespace tesseract
+
+#endif  // def DISABLED_LEGACY_ENGINE

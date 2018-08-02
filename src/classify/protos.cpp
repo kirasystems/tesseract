@@ -1,5 +1,5 @@
 /* -*-C-*-
- ********************************************************************************
+ ******************************************************************************
  *
  * File:        protos.cpp  (Formerly protos.c)
  * Description:
@@ -21,16 +21,14 @@
  ** See the License for the specific language governing permissions and
  ** limitations under the License.
  *
- *********************************************************************************/
+ *****************************************************************************/
 /*----------------------------------------------------------------------
               I n c l u d e s
 ----------------------------------------------------------------------*/
 #include "protos.h"
-#include "const.h"
 #include "emalloc.h"
 #include "callcpp.h"
 #include "tprintf.h"
-#include "scanutils.h"
 #include "globals.h"
 #include "classify.h"
 #include "params.h"
@@ -56,7 +54,7 @@ STRING_VAR(classify_training_file, "MicroFeatures", "Training file");
  *
  * Add a new config to this class.  Malloc new space and copy the
  * old configs if necessary.  Return the config id for the new config.
- * 
+ *
  * @param Class The class to add to
  */
 int AddConfigToClass(CLASS_TYPE Class) {
@@ -92,7 +90,7 @@ int AddConfigToClass(CLASS_TYPE Class) {
  *
  * Add a new proto to this class.  Malloc new space and copy the
  * old protos if necessary.  Return the proto id for the new proto.
- * 
+ *
  * @param Class The class to add to
  */
 int AddProtoToClass(CLASS_TYPE Class) {
@@ -134,13 +132,13 @@ int AddProtoToClass(CLASS_TYPE Class) {
  * @name ClassConfigLength
  *
  * Return the length of all the protos in this class.
- * 
+ *
  * @param Class The class to add to
  * @param Config FIXME
  */
-FLOAT32 ClassConfigLength(CLASS_TYPE Class, BIT_VECTOR Config) {
+float ClassConfigLength(CLASS_TYPE Class, BIT_VECTOR Config) {
   int16_t Pid;
-  FLOAT32 TotalLength = 0;
+  float TotalLength = 0;
 
   for (Pid = 0; Pid < Class->NumProtos; Pid++) {
     if (test_bit (Config, Pid)) {
@@ -156,12 +154,12 @@ FLOAT32 ClassConfigLength(CLASS_TYPE Class, BIT_VECTOR Config) {
  * @name ClassProtoLength
  *
  * Return the length of all the protos in this class.
- * 
+ *
  * @param Class The class to use
  */
-FLOAT32 ClassProtoLength(CLASS_TYPE Class) {
+float ClassProtoLength(CLASS_TYPE Class) {
   int16_t Pid;
-  FLOAT32 TotalLength = 0;
+  float TotalLength = 0;
 
   for (Pid = 0; Pid < Class->NumProtos; Pid++) {
     TotalLength += (ProtoIn (Class, Pid))->Length;
@@ -174,7 +172,7 @@ FLOAT32 ClassProtoLength(CLASS_TYPE Class) {
  * @name CopyProto
  *
  * Copy the first proto into the second.
- * 
+ *
  * @param Src Source
  * @param Dest Destination
  */
@@ -195,9 +193,9 @@ void CopyProto(PROTO Src, PROTO Dest) {
  * Fill in Protos A, B, C fields based on the X, Y, Angle fields.
  **********************************************************************/
 void FillABC(PROTO Proto) {
-  FLOAT32 Slope, Intercept, Normalizer;
+  float Slope, Intercept, Normalizer;
 
-  Slope = tan (Proto->Angle * 2.0 * PI);
+  Slope = tan(Proto->Angle * 2.0 * M_PI);
   Intercept = Proto->Y - Slope * Proto->X;
   Normalizer = 1.0 / sqrt (Slope * Slope + 1.0);
   Proto->A = Slope * Normalizer;
@@ -276,6 +274,6 @@ void PrintProtos(CLASS_TYPE Class) {
     PrintProto (ProtoIn (Class, Pid));
     cprintf ("\t");
     PrintProtoLine (ProtoIn (Class, Pid));
-    new_line();
+    tprintf("\n");
   }
 }

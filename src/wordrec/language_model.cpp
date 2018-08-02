@@ -18,20 +18,30 @@
 //
 ///////////////////////////////////////////////////////////////////////
 
-#include <cmath>
-
 #include "language_model.h"
+#include <cassert>                    // for assert
+#include <cmath>                      // for log2, pow
+#include "blamer.h"                   // for BlamerBundle
+#include "ccutil.h"                   // for CCUtil
+#include "dawg.h"                     // for NO_EDGE, Dawg, Dawg::kPatternUn...
+#include "errcode.h"                  // for ASSERT_HOST
+#include "lm_state.h"                 // for ViterbiStateEntry, ViterbiState...
+#include "matrix.h"                   // for MATRIX_COORD
+#include "pageres.h"                  // for WERD_RES
+#include "params.h"                   // for IntParam, BoolParam, DoubleParam
+#include "params_training_featdef.h"  // for ParamsTrainingHypothesis, PTRAI...
+#include "tprintf.h"                  // for tprintf
+#include "unichar.h"                  // for UNICHAR_ID, INVALID_UNICHAR_ID
+#include "unicharset.h"               // for UNICHARSET
+#include "unicity_table.h"            // for UnicityTable
 
-#include "dawg.h"
-#include "intproto.h"
-#include "helpers.h"
-#include "lm_state.h"
-#include "lm_pain_points.h"
-#include "matrix.h"
-#include "params.h"
-#include "params_training_featdef.h"
+template <typename T> class GenericVector;
+template <typename T> class UnicityTable;
 
 namespace tesseract {
+
+class LMPainPoints;
+struct FontInfo;
 
 #if (defined(_MSC_VER) && _MSC_VER < 1900) || defined(ANDROID)
 static inline double log2(double n) {
@@ -575,9 +585,9 @@ bool LanguageModel::AddViterbiStateEntry(
     else
       tprintf("\n");
   }
+  ASSERT_HOST(curr_state != nullptr);
   // Check whether the list is full.
-  if (curr_state != nullptr &&
-      curr_state->viterbi_state_entries_length >=
+  if (curr_state->viterbi_state_entries_length >=
           language_model_viterbi_list_max_size) {
     if (language_model_debug_level > 1) {
       tprintf("AddViterbiStateEntry: viterbi list is full!\n");
@@ -1127,7 +1137,7 @@ void LanguageModel::FillConsistencyInfo(
     }
     if (!word_res->blob_widths.empty()) {  // if we have widths/gaps info
       bool expected_gap_found = false;
-      float expected_gap;
+      float expected_gap = 0.0f;
       int temp_gap;
       if (fontinfo_id >= 0) {  // found a common font
         ASSERT_HOST(fontinfo_id < fontinfo_table_->size());
@@ -1140,7 +1150,6 @@ void LanguageModel::FillConsistencyInfo(
         consistency_info->inconsistent_font = true;
         // Get an average of the expected gaps in each font
         int num_addends = 0;
-        expected_gap = 0;
         int temp_fid;
         for (int i = 0; i < 4; ++i) {
           if (i == 0) {
@@ -1159,9 +1168,9 @@ void LanguageModel::FillConsistencyInfo(
             num_addends++;
           }
         }
-        expected_gap_found = (num_addends > 0);
         if (num_addends > 0) {
           expected_gap /= static_cast<float>(num_addends);
+          expected_gap_found = true;
         }
       }
       if (expected_gap_found) {
@@ -1275,7 +1284,7 @@ void LanguageModel::UpdateBestChoice(
     return;
   }
   if (word_res->chopped_word != nullptr && !word_res->chopped_word->blobs.empty())
-    word->SetScriptPositions(false, word_res->chopped_word);
+    word->SetScriptPositions(false, word_res->chopped_word, language_model_debug_level);
   // Update and log new raw_choice if needed.
   if (word_res->raw_choice == nullptr ||
       word->rating() < word_res->raw_choice->rating()) {

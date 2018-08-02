@@ -117,13 +117,15 @@
 #ifndef LIST_H
 #define LIST_H
 
-#include "cutil.h"
+#include "cutil.h"              // for int_compare, void_dest, ...
 #include "tesscallback.h"
 
 /*----------------------------------------------------------------------
                   T y p e s
 ----------------------------------------------------------------------*/
-#define NIL_LIST  (LIST) 0
+
+#define NIL_LIST  ((LIST)nullptr)
+
 struct list_rec
 {
   struct list_rec *node;

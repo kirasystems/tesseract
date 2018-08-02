@@ -17,8 +17,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include <cstdlib>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #ifdef __APPLE__
@@ -27,20 +27,22 @@
 #include <CL/cl.h>
 #endif
 
+struct TessDeviceScore;
+
 // device type
-typedef enum {
+enum ds_device_type {
   DS_DEVICE_NATIVE_CPU = 0,
   DS_DEVICE_OPENCL_DEVICE
-} ds_device_type;
+};
 
-typedef struct {
-  ds_device_type  type;
-  cl_device_id    oclDeviceID;
-  char*           oclDeviceName;
-  char*           oclDriverVersion;
+struct ds_device {
+  ds_device_type type;
+  cl_device_id oclDeviceID;
+  char* oclDeviceName;
+  char* oclDriverVersion;
   // a pointer to the score data, the content/format is application defined.
-  void*           score;
-} ds_device;
+  TessDeviceScore* score;
+};
 
 #endif  // USE_OPENCL
 #endif  // DEVICE_SELECTION_H

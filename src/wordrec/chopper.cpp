@@ -27,24 +27,30 @@
           I n c l u d e s
 ----------------------------------------------------------------------*/
 
-#include <cmath>
-
 #include "chopper.h"
+#include "blamer.h"    // for BlamerBundle, IRR_CORRECT
+#include "blobs.h"     // for TPOINT, TBLOB, EDGEPT, TESSLINE, divisible_blob
+#include "callcpp.h"   // for Red
+#include "dict.h"      // for Dict
+#include "host.h"      // for FALSE, TRUE
+#include "lm_pain_points.h" // for LMPainPoints
+#include "lm_state.h"  // for BestChoiceBundle
+#include "matrix.h"    // for MATRIX
+#include "normalis.h"  // for DENORM
+#include "pageres.h"   // for WERD_RES
+#include "params.h"    // for IntParam, BoolParam
+#include "ratngs.h"    // for BLOB_CHOICE (ptr only), BLOB_CHOICE_LIST (ptr ...
+#include "rect.h"      // for TBOX
+#include "render.h"    // for display_blob
+#include "seam.h"      // for SEAM
+#include "split.h"     // for remove_edgept
+#include "stopper.h"   // for DANGERR
+#include "tprintf.h"   // for tprintf
+#include "wordrec.h"   // for Wordrec, SegSearchPending (ptr only)
 
-#include "assert.h"
-#include "associate.h"
-#include "blobs.h"
-#include "callcpp.h"
-#include "const.h"
-#include "findseam.h"
-#include "globals.h"
-#include "render.h"
-#include "pageres.h"
-#include "seam.h"
-#include "stopper.h"
-#include "structures.h"
-#include "unicharset.h"
-#include "wordrec.h"
+class CHAR_FRAGMENT;
+
+template <typename T> class GenericVector;
 
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H
@@ -332,7 +338,7 @@ SEAM* Wordrec::improve_one_blob(const GenericVector<BLOB_CHOICE*>& blob_choices,
                                 bool italic_blob,
                                 WERD_RES* word,
                                 int* blob_number) {
-  float rating_ceiling = MAX_FLOAT32;
+  float rating_ceiling = FLT_MAX;
   SEAM *seam = nullptr;
   do {
     *blob_number = select_blob_to_split_from_fixpt(fixpt);
@@ -542,14 +548,14 @@ int Wordrec::select_blob_to_split(
     float rating_ceiling, bool split_next_to_fragment) {
   BLOB_CHOICE *blob_choice;
   int x;
-  float worst = -MAX_FLOAT32;
+  float worst = -FLT_MAX;
   int worst_index = -1;
-  float worst_near_fragment = -MAX_FLOAT32;
+  float worst_near_fragment = -FLT_MAX;
   int worst_index_near_fragment = -1;
   const CHAR_FRAGMENT **fragments = nullptr;
 
   if (chop_debug) {
-    if (rating_ceiling < MAX_FLOAT32)
+    if (rating_ceiling < FLT_MAX)
       tprintf("rating_ceiling = %8.4f\n", rating_ceiling);
     else
       tprintf("rating_ceiling = No Limit\n");

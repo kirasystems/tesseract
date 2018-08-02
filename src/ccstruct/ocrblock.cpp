@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        ocrblock.cpp  (Formerly block.c)
  * Description: BLOCK member functions and iterator functions.
- * Author:		Ray Smith
- * Created:		Fri Mar 15 09:41:28 GMT 1991
+ * Author:      Ray Smith
+ * Created:     Fri Mar 15 09:41:28 GMT 1991
  *
  * (C) Copyright 1991, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@
 #include "ocrblock.h"
 #include <cstdlib>
 #include <memory>  // std::unique_ptr
-#include "blckerr.h"
 #include "stepblob.h"
 #include "tprintf.h"
 
@@ -253,7 +252,7 @@ const BLOCK & source             //from this
 //   margin - return value, the distance from x,y to the left margin of the
 //       block containing it.
 // If all segments were to the right of x, we return false and 0.
-bool LeftMargin(ICOORDELT_LIST *segments, int x, int *margin) {
+static bool LeftMargin(ICOORDELT_LIST *segments, int x, int *margin) {
   bool found = false;
   *margin = 0;
   if (segments->empty())
@@ -283,7 +282,7 @@ bool LeftMargin(ICOORDELT_LIST *segments, int x, int *margin) {
 //   margin - return value, the distance from x,y to the right margin of the
 //       block containing it.
 // If all segments were to the left of x, we return false and 0.
-bool RightMargin(ICOORDELT_LIST *segments, int x, int *margin) {
+static bool RightMargin(ICOORDELT_LIST *segments, int x, int *margin) {
   bool found = false;
   *margin = 0;
   if (segments->empty())

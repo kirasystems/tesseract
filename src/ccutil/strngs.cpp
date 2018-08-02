@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        strngs.cpp  (Formerly strings.c)
  * Description: STRING class functions.
- * Author:          Ray Smith
- * Created:         Fri Feb 15 09:13:30 GMT 1991
+ * Author:      Ray Smith
+ * Created:     Fri Feb 15 09:13:30 GMT 1991
  *
  * (C) Copyright 1991, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,14 +18,12 @@
  **********************************************************************/
 
 #include "strngs.h"
-
-#include <assert.h>
-
-#include "errcode.h"
-#include "genericvector.h"
-#include "helpers.h"
-#include "serialis.h"
-#include "tprintf.h"
+#include <cassert>          // for assert
+#include <cstdlib>          // for malloc, free
+#include "errcode.h"        // for ASSERT_HOST
+#include "genericvector.h"  // for GenericVector
+#include "helpers.h"        // for ReverseN
+#include "serialis.h"       // for TFile
 
 using tesseract::TFile;
 
@@ -53,7 +51,7 @@ const int kMaxDoubleSize = 16;
 const int kMinCapacity = 16;
 
 char* STRING::AllocData(int used, int capacity) {
-  data_ = (STRING_HEADER *)alloc_string(capacity + sizeof(STRING_HEADER));
+  data_ = (STRING_HEADER *)malloc(capacity + sizeof(STRING_HEADER));
 
   // header is the metadata for this memory block
   STRING_HEADER* header = GetHeader();
@@ -63,7 +61,8 @@ char* STRING::AllocData(int used, int capacity) {
 }
 
 void STRING::DiscardData() {
-  free_string((char *)data_);
+  free(data_);
+  data_ = nullptr;
 }
 
 // This is a private method; ensure FixHeader is called (or used_ is well defined)
@@ -80,7 +79,7 @@ char* STRING::ensure_cstr(int32_t min_capacity) {
     min_capacity = 2 * orig_header->capacity_;
 
   int alloc = sizeof(STRING_HEADER) + min_capacity;
-  STRING_HEADER* new_header = (STRING_HEADER*)(alloc_string(alloc));
+  STRING_HEADER* new_header = (STRING_HEADER*)(malloc(alloc));
 
   memcpy(&new_header[1], GetCStr(), orig_header->used_);
   new_header->capacity_ = min_capacity;
@@ -147,44 +146,42 @@ STRING::~STRING() {
 // TODO(rays) Change all callers to use TFile and remove the old functions.
 // Writes to the given file. Returns false in case of error.
 bool STRING::Serialize(FILE* fp) const {
-  int32_t len = length();
-  if (fwrite(&len, sizeof(len), 1, fp) != 1) return false;
-  if (static_cast<int>(fwrite(GetCStr(), 1, len, fp)) != len) return false;
-  return true;
+  uint32_t len = length();
+  return tesseract::Serialize(fp, &len) &&
+         tesseract::Serialize(fp, GetCStr(), len);
 }
 // Writes to the given file. Returns false in case of error.
 bool STRING::Serialize(TFile* fp) const {
-  int32_t len = length();
-  if (fp->FWrite(&len, sizeof(len), 1) != 1) return false;
-  if (fp->FWrite(GetCStr(), 1, len) != len) return false;
-  return true;
+  uint32_t len = length();
+  return fp->Serialize(&len) &&
+         fp->Serialize(GetCStr(), len);
 }
 // Reads from the given file. Returns false in case of error.
 // If swap is true, assumes a big/little-endian swap is needed.
 bool STRING::DeSerialize(bool swap, FILE* fp) {
-  int32_t len;
-  if (fread(&len, sizeof(len), 1, fp) != 1) return false;
+  uint32_t len;
+  if (!tesseract::DeSerialize(fp, &len)) return false;
   if (swap)
     ReverseN(&len, sizeof(len));
+  // Arbitrarily limit the number of characters to protect against bad data.
+  if (len > UINT16_MAX) return false;
   truncate_at(len);
-  if (static_cast<int>(fread(GetCStr(), 1, len, fp)) != len) return false;
-  return true;
+  return tesseract::DeSerialize(fp, GetCStr(), len);
 }
 // Reads from the given file. Returns false in case of error.
 // If swap is true, assumes a big/little-endian swap is needed.
 bool STRING::DeSerialize(TFile* fp) {
-  int32_t len;
-  if (fp->FReadEndian(&len, sizeof(len), 1) != 1) return false;
+  uint32_t len;
+  if (!fp->DeSerialize(&len)) return false;
   truncate_at(len);
-  if (fp->FRead(GetCStr(), 1, len) != len) return false;
-  return true;
+  return fp->DeSerialize(GetCStr(), len);
 }
 
 // As DeSerialize, but only seeks past the data - hence a static method.
-bool STRING::SkipDeSerialize(tesseract::TFile* fp) {
-  int32_t len;
-  if (fp->FReadEndian(&len, sizeof(len), 1) != 1) return false;
-  return fp->FRead(nullptr, 1, len) == len;
+bool STRING::SkipDeSerialize(TFile* fp) {
+  uint32_t len;
+  if (!fp->DeSerialize(&len)) return false;
+  return fp->Skip(len);
 }
 
 bool STRING::contains(const char c) const {

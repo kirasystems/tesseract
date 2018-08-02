@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        quspline.h  (Formerly qspline.h)
  * Description: Code for the QSPLINE class.
- * Author:		Ray Smith
- * Created:		Tue Oct 08 17:16:12 BST 1991
+ * Author:      Ray Smith
+ * Created:     Tue Oct 08 17:16:12 BST 1991
  *
  * (C) Copyright 1991, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,16 @@
  *
  **********************************************************************/
 
-#ifndef           QUSPLINE_H
-#define           QUSPLINE_H
+#ifndef QUSPLINE_H
+#define QUSPLINE_H
 
-#include          "quadratc.h"
-#include          "serialis.h"
-#include          "memry.h"
-#include          "rect.h"
+#include <cstdint>             // for int32_t
+#include "scrollview.h"        // for ScrollView, ScrollView::Color
 
+class ICOORD;
+class QUAD_COEFFS;
 class ROW;
+class TBOX;
 struct Pix;
 
 class QSPLINE

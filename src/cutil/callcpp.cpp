@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        callcpp.cpp
  * Description: extern C interface calling C++ from C.
- * Author:		Ray Smith
- * Created:		Sun Feb 04 20:39:23 MST 1996
+ * Author:      Ray Smith
+ * Created:     Sun Feb 04 20:39:23 MST 1996
  *
  * (C) Copyright 1996, Hewlett-Packard Co.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,21 +22,12 @@
 #include "config_auto.h"
 #endif
 
-#include          "errcode.h"
-#ifdef __UNIX__
-#include          <assert.h>
-#include <stdarg.h>
-#endif
-#include          <time.h>
-#include          "memry.h"
-#include          "scrollview.h"
-#include          "params.h"
-#include          "callcpp.h"
-#include          "tprintf.h"
-#include          "host.h"
-#include "unichar.h"
-
-#include <memory>
+#include "callcpp.h"
+#include <cstdarg>      // for va_end, va_list, va_start
+#include <cstdio>       // for vsprintf
+#include <memory>       // for unique_ptr
+#include "scrollview.h" // for ScrollView, SVEvent, SVET_ANY, SVET_INPUT
+#include "tprintf.h"    // for tprintf
 
 void
 cprintf (                        //Trace printf

@@ -17,12 +17,11 @@
  *
  **********************************************************************/
 
-#include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <cstring>
 #ifdef __UNIX__
-#include          <assert.h>
-#include          <unistd.h>
-#include          <errno.h>
+#include <unistd.h>
 #endif
 #include "helpers.h"
 #include "tessvars.h"
@@ -42,23 +41,6 @@
 #define CTRL_TAB        '\011'   //tab
 #define CTRL_NEWLINE      '\012' //newline
 #define CTRL_HARDLINE   '\015'   //cr
-
-/**********************************************************************
- * pixels_to_pts
- *
- * Convert an integer number of pixels to the nearest integer
- * number of points.
- **********************************************************************/
-
-int32_t pixels_to_pts(               //convert coords
-                    int32_t pixels,
-                    int32_t pix_res  //resolution
-                   ) {
-  float pts;                     //converted value
-
-  pts = pixels * 72.0 / pix_res;
-  return (int32_t) (pts + 0.5);    //round it
-}
 
 namespace tesseract {
 void Tesseract::output_pass(  //Tess output pass //send to api

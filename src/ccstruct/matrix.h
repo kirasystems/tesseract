@@ -1,6 +1,6 @@
 /* -*-C-*-
  ******************************************************************************
- * File:         matrix.h  (Formerly matrix.h)
+ * File:         matrix.h
  * Description:  Generic 2-d array/matrix and banded triangular matrix class.
  * Author:       Ray Smith
  * TODO(rays) Separate from ratings matrix, which it also contains:
@@ -10,9 +10,6 @@
  * Author:       Mark Seaman, OCR Technology
  * Created:      Wed May 16 13:22:06 1990
  * Modified:     Tue Mar 19 16:00:20 1991 (Mark Seaman) marks@hpgrlt
- * Language:     C
- * Package:      N/A
- * Status:       Experimental (Do Not Distribute)
  *
  * (c) Copyright 1990, Hewlett-Packard Company.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,20 +23,25 @@
  ** limitations under the License.
  *
  *********************************************************************************/
+
 #ifndef TESSERACT_CCSTRUCT_MATRIX_H_
 #define TESSERACT_CCSTRUCT_MATRIX_H_
 
-#include <algorithm>
-#include <cmath>
-#include "kdpair.h"
-#include "points.h"
-#include "serialis.h"
-#include "unicharset.h"
+#include <algorithm>    // for max, min
+#include <cmath>        // for sqrt, fabs, isfinite
+#include <cstdint>      // for int32_t
+#include <cstdio>       // for FILE
+#include <cstring>      // for memcpy
+#include "errcode.h"    // for ASSERT_HOST
+#include "helpers.h"    // for ReverseN, ClipToRange
+#include "kdpair.h"     // for KDPairInc
+#include "points.h"     // for ICOORD
+#include "serialis.h"   // for TFile
 
-class BLOB_CHOICE;
 class BLOB_CHOICE_LIST;
+class UNICHARSET;
 
-#define NOT_CLASSIFIED static_cast<BLOB_CHOICE_LIST*>(0)
+#define NOT_CLASSIFIED static_cast<BLOB_CHOICE_LIST*>(nullptr)
 
 // A generic class to hold a 2-D matrix with entries of type T, but can also
 // act as a base class for other implementations, such as a triangular or
@@ -141,17 +143,16 @@ class GENERIC_2D_ARRAY {
   // Only works with bitwise-serializeable types!
   bool Serialize(FILE* fp) const {
     if (!SerializeSize(fp)) return false;
-    if (fwrite(&empty_, sizeof(empty_), 1, fp) != 1) return false;
+    if (!tesseract::Serialize(fp, &empty_)) return false;
     int size = num_elements();
-    if (fwrite(array_, sizeof(*array_), size, fp) != size) return false;
-    return true;
+    return tesseract::Serialize(fp, &array_[0], size);
   }
+
   bool Serialize(tesseract::TFile* fp) const {
     if (!SerializeSize(fp)) return false;
-    if (fp->FWrite(&empty_, sizeof(empty_), 1) != 1) return false;
+    if (!fp->Serialize(&empty_)) return false;
     int size = num_elements();
-    if (fp->FWrite(array_, sizeof(*array_), size) != size) return false;
-    return true;
+    return fp->Serialize(&array_[0], size);
   }
 
   // Reads from the given file. Returns false in case of error.
@@ -159,22 +160,21 @@ class GENERIC_2D_ARRAY {
   // If swap is true, assumes a big/little-endian swap is needed.
   bool DeSerialize(bool swap, FILE* fp) {
     if (!DeSerializeSize(swap, fp)) return false;
-    if (fread(&empty_, sizeof(empty_), 1, fp) != 1) return false;
+    if (!tesseract::DeSerialize(fp, &empty_)) return false;
     if (swap) ReverseN(&empty_, sizeof(empty_));
     int size = num_elements();
-    if (fread(array_, sizeof(*array_), size, fp) != size) return false;
+    if (!tesseract::DeSerialize(fp, &array_[0], size)) return false;
     if (swap) {
       for (int i = 0; i < size; ++i)
         ReverseN(&array_[i], sizeof(array_[i]));
     }
     return true;
   }
+
   bool DeSerialize(tesseract::TFile* fp) {
-    if (!DeSerializeSize(fp)) return false;
-    if (fp->FReadEndian(&empty_, sizeof(empty_), 1) != 1) return false;
-    int size = num_elements();
-    if (fp->FReadEndian(array_, sizeof(*array_), size) != size) return false;
-    return true;
+    return DeSerializeSize(fp) &&
+           fp->DeSerialize(&empty_) &&
+           fp->DeSerialize(&array_[0], num_elements());
   }
 
   // Writes to the given file. Returns false in case of error.
@@ -464,36 +464,40 @@ class GENERIC_2D_ARRAY {
  protected:
   // Factored helper to serialize the size.
   bool SerializeSize(FILE* fp) const {
-    int32_t size = dim1_;
-    if (fwrite(&size, sizeof(size), 1, fp) != 1) return false;
+    uint32_t size = dim1_;
+    if (!tesseract::Serialize(fp, &size)) return false;
     size = dim2_;
-    if (fwrite(&size, sizeof(size), 1, fp) != 1) return false;
-    return true;
+    return tesseract::Serialize(fp, &size);
   }
   bool SerializeSize(tesseract::TFile* fp) const {
-    int32_t size = dim1_;
-    if (fp->FWrite(&size, sizeof(size), 1) != 1) return false;
+    uint32_t size = dim1_;
+    if (!fp->Serialize(&size)) return false;
     size = dim2_;
-    if (fp->FWrite(&size, sizeof(size), 1) != 1) return false;
-    return true;
+    return fp->Serialize(&size);
   }
   // Factored helper to deserialize the size.
   // If swap is true, assumes a big/little-endian swap is needed.
   bool DeSerializeSize(bool swap, FILE* fp) {
-    int32_t size1, size2;
-    if (fread(&size1, sizeof(size1), 1, fp) != 1) return false;
-    if (fread(&size2, sizeof(size2), 1, fp) != 1) return false;
+    uint32_t size1, size2;
+    if (!tesseract::DeSerialize(fp, &size1)) return false;
+    if (!tesseract::DeSerialize(fp, &size2)) return false;
     if (swap) {
       ReverseN(&size1, sizeof(size1));
       ReverseN(&size2, sizeof(size2));
     }
+    // Arbitrarily limit the number of elements to protect against bad data.
+    if (size1 > UINT16_MAX) return false;
+    if (size2 > UINT16_MAX) return false;
     Resize(size1, size2, empty_);
     return true;
   }
   bool DeSerializeSize(tesseract::TFile* fp) {
     int32_t size1, size2;
-    if (fp->FReadEndian(&size1, sizeof(size1), 1) != 1) return false;
-    if (fp->FReadEndian(&size2, sizeof(size2), 1) != 1) return false;
+    if (!fp->DeSerialize(&size1)) return false;
+    if (!fp->DeSerialize(&size2)) return false;
+    // Arbitrarily limit the number of elements to protect against bad data.
+    if (size1 > UINT16_MAX) return false;
+    if (size2 > UINT16_MAX) return false;
     Resize(size1, size2, empty_);
     return true;
   }

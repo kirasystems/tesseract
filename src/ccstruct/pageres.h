@@ -1,7 +1,7 @@
 /**********************************************************************
  * File:        pageres.h  (Formerly page_res.h)
  * Description: Results classes used by control.c
- * Author:    Phil Cheatle
+ * Author:      Phil Cheatle
  * Created:     Tue Sep 22 08:42:49 BST 1992
  *
  * (C) Copyright 1992, Hewlett-Packard Ltd.
@@ -16,26 +16,45 @@
  ** limitations under the License.
  *
  **********************************************************************/
-#ifndef           PAGERES_H
-#define           PAGERES_H
 
-#include "blamer.h"
-#include "blobs.h"
-#include "boxword.h"
-#include "elst.h"
-#include "genericvector.h"
-#include "normalis.h"
-#include "ocrblock.h"
-#include "ocrrow.h"
-#include "params_training_featdef.h"
-#include "ratngs.h"
-#include "rejctmap.h"
-#include "seam.h"
-#include "werd.h"
+#ifndef PAGERES_H
+#define PAGERES_H
+
+#include <cstdint>             // for int32_t, int16_t
+#include <set>                 // for std::pair
+#include <vector>              // for std::vector
+#include <sys/types.h>         // for int8_t
+#include "blamer.h"            // for BlamerBundle (ptr only), IRR_NUM_REASONS
+#include "clst.h"              // for CLIST_ITERATOR, CLISTIZEH
+#include "elst.h"              // for ELIST_ITERATOR, ELIST_LINK, ELISTIZEH
+#include "genericvector.h"     // for GenericVector, PointerVector (ptr only)
+#include "matrix.h"            // for MATRIX
+#include "normalis.h"          // for DENORM
+#include "ratngs.h"            // for WERD_CHOICE, BLOB_CHOICE (ptr only)
+#include "rect.h"              // for TBOX
+#include "rejctmap.h"          // for REJMAP
+#include "strngs.h"            // for STRING
+#include "unichar.h"           // for UNICHAR_ID, INVALID_UNICHAR_ID
+#include "unicharset.h"        // for UNICHARSET, UNICHARSET::Direction, UNI...
+#include "werd.h"              // for WERD, W_BOL, W_EOL
+
+class BLOCK;
+class BLOCK_LIST;
+class BLOCK_RES;
+class ROW;
+class ROW_RES;
+class SEAM;
+class WERD_RES;
+
+struct Pix;
+struct TWERD;
+
+template <class R, class A1, class A2> class TessResultCallback2;
 
 namespace tesseract {
-struct FontInfo;
-class Tesseract;
+  class BoxWord;
+  class Tesseract;
+  struct FontInfo;
 }
 using tesseract::FontInfo;
 
@@ -201,6 +220,8 @@ class WERD_RES : public ELIST_LINK {
   // Gaps between blobs in chopped_word. blob_gaps[i] is the gap between
   // blob i and blob i+1.
   GenericVector<int> blob_gaps;
+  // Stores the glyph confidences of every timestep of the lstm
+  std::vector<std::vector<std::pair<const char*, float>>> timesteps;
   // Ratings matrix contains classifier choices for each classified combination
   // of blobs. The dimension is the same as the number of blobs in chopped_word
   // and the leading diagonal corresponds to classifier results of the blobs

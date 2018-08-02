@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        blread.cpp  (Formerly pdread.c)
  * Description: Friend function of BLOCK to read the uscan pd file.
- * Author:		Ray Smith
- * Created:		Mon Mar 18 14:39:00 GMT 1991
+ * Author:      Ray Smith
+ * Created:     Mon Mar 18 14:39:00 GMT 1991
  *
  * (C) Copyright 1991, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,11 @@
  *
  **********************************************************************/
 
-#include          <stdlib.h>
-#ifdef __UNIX__
-#include          <assert.h>
-#endif
-#include          "scanutils.h"
-#include          "fileerr.h"
-#include          "blread.h"
+#include "blread.h"
+#include <cstdio>       // for fclose, fopen, FILE
+#include "host.h"       // for TRUE
+#include "ocrblock.h"   // for BLOCK_IT, BLOCK, BLOCK_LIST (ptr only)
+#include "scanutils.h"  // for tfscanf
 
 #define UNLV_EXT  ".uzn"  // unlv zone file
 

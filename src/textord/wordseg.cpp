@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        wordseg.cpp  (Formerly wspace.c)
  * Description: Code to segment the blobs into words.
- * Author:		Ray Smith
- * Created:		Fri Oct 16 11:32:28 BST 1992
+ * Author:      Ray Smith
+ * Created:     Fri Oct 16 11:32:28 BST 1992
  *
  * (C) Copyright 1992, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,21 +17,17 @@
  *
  **********************************************************************/
 
-#ifdef __UNIX__
-#include          <assert.h>
-#endif
-#include          "stderr.h"
-#include          "blobbox.h"
-#include          "statistc.h"
-#include          "drawtord.h"
-#include          "makerow.h"
-#include          "pitsync1.h"
-#include          "tovars.h"
-#include          "topitch.h"
-#include          "cjkpitch.h"
-#include          "textord.h"
-#include          "fpchop.h"
-#include          "wordseg.h"
+#include "blobbox.h"
+#include "statistc.h"
+#include "drawtord.h"
+#include "makerow.h"
+#include "pitsync1.h"
+#include "tovars.h"
+#include "topitch.h"
+#include "cjkpitch.h"
+#include "textord.h"
+#include "fpchop.h"
+#include "wordseg.h"
 
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H

@@ -15,10 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 ///////////////////////////////////////////////////////////////////////
+
 #ifndef TESSERACT_LSTM_STATIC_SHAPE_H_
 #define TESSERACT_LSTM_STATIC_SHAPE_H_
 
-#include "tprintf.h"
+#include "serialis.h"   // for TFile
+#include "tprintf.h"    // for tprintf
 
 namespace tesseract {
 
@@ -62,11 +64,11 @@ class StaticShape {
   bool DeSerialize(TFile *fp) {
     int32_t tmp = LT_NONE;
     bool result =
-      fp->FReadEndian(&batch_, sizeof(batch_), 1) == 1 &&
-      fp->FReadEndian(&height_, sizeof(height_), 1) == 1 &&
-      fp->FReadEndian(&width_, sizeof(width_), 1) == 1 &&
-      fp->FReadEndian(&depth_, sizeof(depth_), 1) == 1 &&
-      fp->FReadEndian(&tmp, sizeof(tmp), 1) == 1;
+      fp->DeSerialize(&batch_) &&
+      fp->DeSerialize(&height_) &&
+      fp->DeSerialize(&width_) &&
+      fp->DeSerialize(&depth_) &&
+      fp->DeSerialize(&tmp);
     loss_type_ = static_cast<LossType>(tmp);
     return result;
   }
@@ -74,11 +76,11 @@ class StaticShape {
   bool Serialize(TFile *fp) const {
     int32_t tmp = loss_type_;
     return
-      fp->FWrite(&batch_, sizeof(batch_), 1) == 1 &&
-      fp->FWrite(&height_, sizeof(height_), 1) == 1 &&
-      fp->FWrite(&width_, sizeof(width_), 1) == 1 &&
-      fp->FWrite(&depth_, sizeof(depth_), 1) == 1 &&
-      fp->FWrite(&tmp, sizeof(tmp), 1) == 1;
+      fp->Serialize(&batch_) &&
+      fp->Serialize(&height_) &&
+      fp->Serialize(&width_) &&
+      fp->Serialize(&depth_) &&
+      fp->Serialize(&tmp);
   }
 
  private:

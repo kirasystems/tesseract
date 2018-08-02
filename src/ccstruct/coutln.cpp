@@ -1,8 +1,8 @@
 /**********************************************************************
  * File:        coutln.cpp  (Formerly coutline.c)
  * Description: Code for the C_OUTLINE class.
- * Author:                  Ray Smith
- * Created:                 Mon Oct 07 16:01:57 BST 1991
+ * Author:      Ray Smith
+ * Created:     Mon Oct 07 16:01:57 BST 1991
  *
  * (C) Copyright 1991, Hewlett-Packard Ltd.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,17 +17,20 @@
  *
  **********************************************************************/
 
-#include <algorithm>
-#include <string.h>
-#ifdef __UNIX__
-#include <assert.h>
-#endif
-
 #include "coutln.h"
-
-#include "allheaders.h"
-#include "blobs.h"
-#include "normalis.h"
+#include <algorithm>      // for max, min
+#include <cmath>          // for abs
+#include <cstdlib>        // for abs
+#include <cstring>        // for memset, memcpy, memmove
+#include "allheaders.h"   // for pixSetPixel, pixGetData, pixRasterop, pixGe...
+#include "arrayaccess.h"  // for GET_DATA_BYTE
+#include "blobs.h"        // for TPOINT
+#include "crakedge.h"     // for CRACKEDGE
+#include "environ.h"      // for l_uint32
+#include "errcode.h"      // for ASSERT_HOST
+#include "helpers.h"      // for ClipToRange, IntCastRounded, Modulo
+#include "normalis.h"     // for DENORM
+#include "pix.h"          // for Pix (ptr only), PIX_DST, PIX_NOT
 
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H
@@ -61,8 +64,7 @@ C_OUTLINE::C_OUTLINE(CRACKEDGE* startpt, ICOORD bot_left, ICOORD top_right,
     return;
   }
                                  //get memory
-  steps = (uint8_t *) alloc_mem (step_mem());
-  memset(steps, 0, step_mem());
+  steps = (uint8_t *)calloc(step_mem(), 1);
   edgept = startpt;
 
   for (stepindex = 0; stepindex < length; stepindex++) {
@@ -95,8 +97,7 @@ int16_t length                     //length of loop
   pos = startpt;
   stepcount = length;            // No. of steps.
   ASSERT_HOST(length >= 0);
-  steps = static_cast<uint8_t*>(alloc_mem(step_mem()));  // Get memory.
-  memset(steps, 0, step_mem());
+  steps = static_cast<uint8_t*>(calloc(step_mem(), 1));  // Get memory.
 
   lastdir = new_steps[length - 1];
   prevdir = lastdir;
@@ -140,14 +141,14 @@ int16_t length                     //length of loop
  */
 
 C_OUTLINE::C_OUTLINE(C_OUTLINE* srcline, FCOORD rotation) : offsets(nullptr) {
-  TBOX new_box;                   //easy bounding
-  int16_t stepindex;               //index to step
-  int16_t dirdiff;                 //direction change
+  TBOX new_box;                  //easy bounding
+  int16_t stepindex;             //index to step
+  int16_t dirdiff;               //direction change
   ICOORD pos;                    //current position
   ICOORD prevpos;                //previous dest point
 
   ICOORD destpos;                //destination point
-  int16_t destindex;               //index to step
+  int16_t destindex = INT16_MAX; //index to step
   DIR128 dir;                    //coded direction
   uint8_t new_step;
 
@@ -159,8 +160,7 @@ C_OUTLINE::C_OUTLINE(C_OUTLINE* srcline, FCOORD rotation) : offsets(nullptr) {
     return;
   }
                                  //get memory
-  steps = (uint8_t *) alloc_mem (step_mem());
-  memset(steps, 0, step_mem());
+  steps = (uint8_t *)calloc(step_mem(), 1);
 
   for (int iteration = 0; iteration < 2; ++iteration) {
     DIR128 round1 = iteration == 0 ? 32 : 0;
@@ -1011,10 +1011,9 @@ void C_OUTLINE::plot_normed(const DENORM& denorm, ScrollView::Color colour,
 C_OUTLINE& C_OUTLINE::operator=(const C_OUTLINE& source) {
   box = source.box;
   start = source.start;
-  if (steps != nullptr)
-    free_mem(steps);
+  free(steps);
   stepcount = source.stepcount;
-  steps = (uint8_t *) alloc_mem (step_mem());
+  steps = (uint8_t *)malloc(step_mem());
   memmove (steps, source.steps, step_mem());
   if (!children.empty ())
     children.clear ();

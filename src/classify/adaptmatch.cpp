@@ -1,8 +1,7 @@
 /******************************************************************************
- ** Filename:    adaptmatch.c
+ ** Filename:    adaptmatch.cpp
  ** Purpose:     High level adaptive matcher.
  ** Author:      Dan Johnson
- ** History:     Mon Mar 11 10:00:10 1991, DSJ, Created.
  **
  ** (c) Copyright Hewlett-Packard Company, 1988.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,45 +22,56 @@
 #include "config_auto.h"
 #endif
 
-#include <ctype.h>
-#include "shapeclassifier.h"
-#include "ambigs.h"
-#include "blobclass.h"
-#include "blobs.h"
-#include "callcpp.h"
-#include "classify.h"
-#include "const.h"
-#include "dict.h"
-#include "efio.h"
-#include "emalloc.h"
-#include "featdefs.h"
-#include "float2int.h"
-#include "genericvector.h"
-#include "globals.h"
-#include "helpers.h"
-#include "intfx.h"
-#include "intproto.h"
-#include "mfoutline.h"
-#include "normfeat.h"
-#include "normmatch.h"
-#include "outfeat.h"
-#include "pageres.h"
-#include "params.h"
-#include "picofeat.h"
-#include "shapetable.h"
-#include "tessclassifier.h"
-#include "trainingsample.h"
-#include "unicharset.h"
-#include "werd.h"
-
-#include <algorithm>
-#include <cstdio>
-#include <cstring>
-#include <cstdlib>
-#include <cmath>
-#ifdef __UNIX__
-#include <assert.h>
-#endif
+#include <algorithm>            // for max, min
+#include <cassert>              // for assert
+#include <cmath>                // for fabs
+#include <cstdint>              // for INT32_MAX, UINT8_MAX
+#include <cstdio>               // for fflush, fclose, fopen, stdout, FILE
+#include <cstdlib>              // for malloc
+#include <cstring>              // for strstr, memset, strcmp
+#include "adaptive.h"           // for ADAPT_CLASS, free_adapted_templates
+#include "ambigs.h"             // for UnicharIdVector, UnicharAmbigs
+#include "bitvec.h"             // for FreeBitVector, NewBitVector, BIT_VECTOR
+#include "blobs.h"              // for TBLOB, TWERD
+#include "callcpp.h"            // for cprintf, window_wait
+#include "classify.h"           // for Classify, CST_FRAGMENT, CST_WHOLE
+#include "dict.h"               // for Dict
+#include "errcode.h"            // for ASSERT_HOST
+#include "featdefs.h"           // for CharNormDesc
+#include "float2int.h"          // for BASELINE_Y_SHIFT
+#include "fontinfo.h"           // for ScoredFont, FontSet
+#include "genericvector.h"      // for GenericVector
+#include "helpers.h"            // for IntCastRounded, ClipToRange
+#include "host.h"               // for FALSE, TRUE
+#include "intfx.h"              // for BlobToTrainingSample, INT_FX_RESULT_S...
+#include "intmatcher.h"         // for CP_RESULT_STRUCT, IntegerMatcher
+#include "intproto.h"           // for INT_FEATURE_STRUCT, (anonymous), Clas...
+#include "matchdefs.h"          // for CLASS_ID, FEATURE_ID, PROTO_ID, NO_PROTO
+#include "mfoutline.h"          // for baseline, character, MF_SCALE_FACTOR
+#include "normalis.h"           // for DENORM, kBlnBaselineOffset, kBlnXHeight
+#include "normfeat.h"           // for ActualOutlineLength, CharNormLength
+#include "ocrfeatures.h"        // for FEATURE_STRUCT, FreeFeatureSet, FEATURE
+#include "oldlist.h"            // for push, delete_d
+#include "outfeat.h"            // for OutlineFeatDir, OutlineFeatLength
+#include "pageres.h"            // for WERD_RES
+#include "params.h"             // for IntParam, BoolParam, DoubleParam, Str...
+#include "picofeat.h"           // for PicoFeatDir, PicoFeatX, PicoFeatY
+#include "protos.h"             // for PROTO_STRUCT, FillABC, PROTO
+#include "ratngs.h"             // for BLOB_CHOICE_IT, BLOB_CHOICE_LIST, BLO...
+#include "rect.h"               // for TBOX
+#include "scrollview.h"         // for ScrollView, ScrollView::BROWN, Scroll...
+#include "seam.h"               // for SEAM
+#include "serialis.h"           // for TFile
+#include "shapeclassifier.h"    // for ShapeClassifier
+#include "shapetable.h"         // for UnicharRating, ShapeTable, Shape, Uni...
+#include "strngs.h"             // for STRING
+#include "tessclassifier.h"     // for TessClassifier
+#include "tessdatamanager.h"    // for TessdataManager, TESSDATA_INTTEMP
+#include "tprintf.h"            // for tprintf
+#include "trainingsample.h"     // for TrainingSample
+#include "unichar.h"            // for UNICHAR_ID, INVALID_UNICHAR_ID
+#include "unicharset.h"         // for UNICHARSET, CHAR_FRAGMENT, UNICHAR_SPACE
+#include "unicity_table.h"      // for UnicityTable
 
 #define ADAPT_TEMPLATE_SUFFIX ".a"
 
@@ -84,7 +94,7 @@ struct ADAPT_RESULTS {
   bool HasNonfragment;
   UNICHAR_ID best_unichar_id;
   int best_match_index;
-  FLOAT32 best_rating;
+  float best_rating;
   GenericVector<UnicharRating> match;
   GenericVector<CP_RESULT_STRUCT> CPResults;
 
@@ -144,11 +154,11 @@ static float ScoredUnichar(UNICHAR_ID id, const ADAPT_RESULTS& results) {
   return results.match[index].rating;
 }
 
-void InitMatcherRatings(FLOAT32 *Rating);
+void InitMatcherRatings(float *Rating);
 
 int MakeTempProtoPerm(void *item1, void *item2);
 
-void SetAdaptiveThreshold(FLOAT32 Threshold);
+void SetAdaptiveThreshold(float Threshold);
 
 
 /*-----------------------------------------------------------------------------
@@ -171,9 +181,6 @@ namespace tesseract {
  *
  * This routine also performs some simple speckle
  * filtering.
- *
- * @note Exceptions: none
- * @note History: Mon Mar 11 10:00:58 1991, DSJ, Created.
  *
  * @param Blob    blob to be classified
  * @param[out] Choices    List of choices found by adaptive matcher.
@@ -449,9 +456,6 @@ void Classify::LearnPieces(const char* fontname, int start, int length,
  * - #AdaptedTemplates current set of adapted templates
  * - #classify_save_adapted_templates TRUE if templates should be saved
  * - #classify_enable_adaptive_matcher TRUE if adaptive matcher is enabled
- *
- * @note Exceptions: none
- * @note History: Tue Mar 19 14:37:06 1991, DSJ, Created.
  */
 void Classify::EndAdaptiveClassifier() {
   STRING Filename;
@@ -520,7 +524,6 @@ void Classify::EndAdaptiveClassifier() {
  *      BuiltInCutoffsFile    file to get avg. feat per class from
  *      classify_use_pre_adapted_templates
  *                            enables use of pre-adapted templates
- *  @note History: Mon Mar 11 12:49:34 1991, DSJ, Created.
  */
 void Classify::InitAdaptiveClassifier(TessdataManager* mgr) {
   if (!classify_enable_adaptive_matcher)
@@ -552,7 +555,6 @@ void Classify::InitAdaptiveClassifier(TessdataManager* mgr) {
     static_classifier_ = new TessClassifier(false, this);
   }
 
-  im_.Init(&classify_debug_level);
   InitIntegerFX();
 
   AllProtosOn = NewBitVector(MAX_NUM_PROTOS);
@@ -647,9 +649,6 @@ void Classify::StartBackupAdaptiveClassifier() {
  * Globals:
  * - #EnableLearning
  * set to TRUE by this routine
- *
- * @note Exceptions: none
- * @note History: Mon Apr 15 16:39:29 1991, DSJ, Created.
  */
 void Classify::SettupPass1() {
   EnableLearning = classify_enable_learning;
@@ -667,9 +666,6 @@ void Classify::SettupPass1() {
  *
  * Globals:
  * - #EnableLearning set to FALSE by this routine
- *
- * @note Exceptions: none
- * @note History: Mon Apr 15 16:39:29 1991, DSJ, Created.
  */
 void Classify::SettupPass2() {
   EnableLearning = FALSE;
@@ -694,9 +690,6 @@ void Classify::SettupPass2() {
  * - #AllProtosOn dummy mask with all 1's
  * - BaselineCutoffs kludge needed to get cutoffs
  * - #PreTrainedTemplates kludge needed to get cutoffs
- *
- * @note Exceptions: none
- * @note History: Thu Mar 14 12:49:39 1991, DSJ, Created.
  */
 void Classify::InitAdaptedClass(TBLOB *Blob,
                                 CLASS_ID ClassId,
@@ -790,8 +783,6 @@ void Classify::InitAdaptedClass(TBLOB *Blob,
  *
  * @return Number of pico-features returned (0 if
  * an error occurred)
- * @note Exceptions: none
- * @note History: Tue Mar 12 17:55:18 1991, DSJ, Created.
  */
 int Classify::GetAdaptiveFeatures(TBLOB *Blob,
                                   INT_FEATURE_ARRAY IntFeatures,
@@ -827,9 +818,7 @@ int Classify::GetAdaptiveFeatures(TBLOB *Blob,
  *
  * @param word current word
  *
- * @return TRUE or FALSE
- * @note Exceptions: none
- * @note History: Thu May 30 14:25:06 1991, DSJ, Created.
+ * @return true or false
  */
 bool Classify::AdaptableWord(WERD_RES* word) {
   if (word->best_choice == nullptr) return false;
@@ -864,11 +853,9 @@ bool Classify::AdaptableWord(WERD_RES* word) {
  * - AllConfigsOn dummy mask to match against all configs
  *
  * @return none
- * @note Exceptions: none
- * @note History: Thu Mar 14 09:36:03 1991, DSJ, Created.
  */
 void Classify::AdaptToChar(TBLOB* Blob, CLASS_ID ClassId, int FontinfoId,
-                           FLOAT32 Threshold,
+                           float Threshold,
                            ADAPT_TEMPLATES adaptive_templates) {
   int NumFeatures;
   INT_FEATURE_ARRAY IntFeatures;
@@ -1007,9 +994,6 @@ void Classify::DisplayAdaptedChar(TBLOB* blob, INT_CLASS_STRUCT* int_class) {
  *
  * @param new_result new result to add
  * @param[out] results results to add new result to
- *
- * @note Exceptions: none
- * @note History: Tue Mar 12 18:19:29 1991, DSJ, Created.
  */
 void Classify::AddNewResult(const UnicharRating& new_result,
                             ADAPT_RESULTS *results) {
@@ -1061,9 +1045,6 @@ void Classify::AddNewResult(const UnicharRating& new_result,
  * @param[out] results place to put match results
  * @param int_features
  * @param fx_info
- *
- * @note Exceptions: none
- * @note History: Tue Mar 12 19:40:36 1991, DSJ, Created.
  */
 void Classify::AmbigClassifier(
     const GenericVector<INT_FEATURE_STRUCT>& int_features,
@@ -1284,8 +1265,6 @@ double Classify::ComputeCorrectedRating(bool debug, int unichar_id,
  * @param fx_info
  *
  * @return Array of possible ambiguous chars that should be checked.
- * @note Exceptions: none
- * @note History: Tue Mar 12 19:38:03 1991, DSJ, Created.
  */
 UNICHAR_ID *Classify::BaselineClassifier(
     TBLOB *Blob, const GenericVector<INT_FEATURE_STRUCT>& int_features,
@@ -1332,9 +1311,6 @@ UNICHAR_ID *Classify::BaselineClassifier(
  * - CharNormCutoffs expected num features for each class
  * - AllProtosOn mask that enables all protos
  * - AllConfigsOn mask that enables all configs
- *
- * @note Exceptions: none
- * @note History: Tue Mar 12 16:02:52 1991, DSJ, Created.
  */
 int Classify::CharNormClassifier(TBLOB *blob,
                                  const TrainingSample& sample,
@@ -1362,7 +1338,7 @@ int Classify::CharNormTrainingSample(bool pruner_only,
   ADAPT_RESULTS* adapt_results = new ADAPT_RESULTS();
   adapt_results->Initialize();
   // Compute the bounding box of the features.
-  int num_features = sample.num_features();
+  uint32_t num_features = sample.num_features();
   // Only the top and bottom of the blob_box are used by MasterMatcher, so
   // fabricate right and left using top and bottom.
   TBOX blob_box(sample.geo_feature(GeoBottom), sample.geo_feature(GeoBottom),
@@ -1423,9 +1399,6 @@ int Classify::CharNormTrainingSample(bool pruner_only,
  *
  * Globals:
  * - matcher_avg_noise_size avg. length of a noise blob
- *
- * @note Exceptions: none
- * @note History: Tue Mar 12 18:36:52 1991, DSJ, Created.
  */
 void Classify::ClassifyAsNoise(ADAPT_RESULTS *results) {
   float rating = results->BlobLength / matcher_avg_noise_size;
@@ -1445,8 +1418,8 @@ void Classify::ConvertMatchesToChoices(const DENORM& denorm, const TBOX& box,
                                        ADAPT_RESULTS *Results,
                                        BLOB_CHOICE_LIST *Choices) {
   assert(Choices != nullptr);
-  FLOAT32 Rating;
-  FLOAT32 Certainty;
+  float Rating;
+  float Certainty;
   BLOB_CHOICE_IT temp_it;
   bool contains_nonfrag = false;
   temp_it.set_to_list(Choices);
@@ -1463,7 +1436,7 @@ void Classify::ConvertMatchesToChoices(const DENORM& denorm, const TBOX& box,
       max_matches = MAX_MATCHES;
   }
 
-  float best_certainty = -MAX_FLOAT32;
+  float best_certainty = -FLT_MAX;
   for (int i = 0; i < Results->match.size(); i++) {
     const UnicharRating& result = Results->match[i];
     bool adapted = result.adapted;
@@ -1524,9 +1497,6 @@ void Classify::ConvertMatchesToChoices(const DENORM& denorm, const TBOX& box,
  * @param Results results of match being debugged
  *
  * Globals: none
- *
- * @note Exceptions: none
- * @note History: Wed Mar 13 16:44:41 1991, DSJ, Created.
  */
 void Classify::DebugAdaptiveClassifier(TBLOB *blob,
                                        ADAPT_RESULTS *Results) {
@@ -1560,9 +1530,6 @@ void Classify::DebugAdaptiveClassifier(TBLOB *blob,
  * - PreTrainedTemplates built-in training templates
  * - AdaptedTemplates templates adapted for this page
  * - matcher_reliable_adaptive_result rating limit for a great match
- *
- * @note Exceptions: none
- * @note History: Tue Mar 12 08:50:11 1991, DSJ, Created.
  */
 void Classify::DoAdaptiveMatch(TBLOB *Blob, ADAPT_RESULTS *Results) {
   UNICHAR_ID *Ambiguities;
@@ -1618,8 +1585,6 @@ void Classify::DoAdaptiveMatch(TBLOB *Blob, ADAPT_RESULTS *Results) {
  * - PreTrainedTemplates built-in templates
  *
  * @return String containing all possible ambiguous classes.
- * @note Exceptions: none
- * @note History: Fri Mar 15 08:08:22 1991, DSJ, Created.
  */
 UNICHAR_ID *Classify::GetAmbiguities(TBLOB *Blob,
                                      CLASS_ID CorrectClass) {
@@ -1706,8 +1671,6 @@ bool Classify::LooksLikeGarbage(TBLOB *blob) {
  * Globals:
  *
  * @return Number of features extracted or 0 if an error occurred.
- * @note Exceptions: none
- * @note History: Tue May 28 10:40:52 1991, DSJ, Created.
  */
 int Classify::GetCharNormFeature(const INT_FX_RESULT_STRUCT& fx_info,
                                  INT_TEMPLATES templates,
@@ -1770,8 +1733,6 @@ void Classify::ComputeCharNormArrays(FEATURE_STRUCT* norm_feature,
  *
  * @return The id of the new config created, a negative integer in
  * case of error.
- * @note Exceptions: none
- * @note History: Fri Mar 15 08:49:46 1991, DSJ, Created.
  */
 int Classify::MakeNewTemporaryConfig(ADAPT_TEMPLATES Templates,
                            CLASS_ID ClassId,
@@ -1867,8 +1828,6 @@ int Classify::MakeNewTemporaryConfig(ADAPT_TEMPLATES Templates,
  * Globals: none
  *
  * @return Max proto id in class after all protos have been added.
- * Exceptions: none
- * History: Fri Mar 15 11:39:38 1991, DSJ, Created.
  */
 PROTO_ID Classify::MakeNewTempProtos(FEATURE_SET Features,
                                      int NumBadFeat,
@@ -1882,9 +1841,9 @@ PROTO_ID Classify::MakeNewTempProtos(FEATURE_SET Features,
   TEMP_PROTO TempProto;
   PROTO Proto;
   FEATURE F1, F2;
-  FLOAT32 X1, X2, Y1, Y2;
-  FLOAT32 A1, A2, AngleDelta;
-  FLOAT32 SegmentLength;
+  float X1, X2, Y1, Y2;
+  float A1, A2, AngleDelta;
+  float SegmentLength;
   PROTO_ID Pid;
 
   for (ProtoStart = BadFeat, LastBad = ProtoStart + NumBadFeat;
@@ -1955,9 +1914,6 @@ PROTO_ID Classify::MakeNewTempProtos(FEATURE_SET Features,
  * @param Blob current blob being adapted to
  *
  * Globals: none
- *
- * @note Exceptions: none
- * @note History: Thu Mar 14 15:54:08 1991, DSJ, Created.
  */
 void Classify::MakePermanent(ADAPT_TEMPLATES Templates,
                              CLASS_ID ClassId,
@@ -2018,8 +1974,6 @@ void Classify::MakePermanent(ADAPT_TEMPLATES Templates,
  * Globals: none
  *
  * @return TRUE if TempProto is converted, FALSE otherwise
- * @note Exceptions: none
- * @note History: Thu Mar 14 18:49:54 1991, DSJ, Created.
  */
 int MakeTempProtoPerm(void *item1, void *item2) {
   ADAPT_CLASS Class;
@@ -2053,9 +2007,6 @@ namespace tesseract {
  * @param results match results to write to File
  *
  * Globals: none
- *
- * @note Exceptions: none
- * @note History: Mon Mar 18 09:24:53 1991, DSJ, Created.
  */
 void Classify::PrintAdaptiveMatchResults(const ADAPT_RESULTS& results) {
   for (int i = 0; i < results.match.size(); ++i) {
@@ -2076,13 +2027,10 @@ void Classify::PrintAdaptiveMatchResults(const ADAPT_RESULTS& results) {
  *
  * Globals:
  * - matcher_bad_match_pad defines a "bad match"
- *
- * @note Exceptions: none
- * @note History: Tue Mar 12 13:51:03 1991, DSJ, Created.
  */
 void Classify::RemoveBadMatches(ADAPT_RESULTS *Results) {
   int Next, NextGood;
-  FLOAT32 BadMatchThreshold;
+  float BadMatchThreshold;
   static const char* romans = "i v x I V X";
   BadMatchThreshold = Results->best_rating - matcher_bad_match_pad;
 
@@ -2139,8 +2087,6 @@ void Classify::RemoveBadMatches(ADAPT_RESULTS *Results) {
  * present.
  *
  * @param Results contains matches to be filtered
- *
- * @note History: Tue Mar 12 13:51:03 1991, DSJ, Created.
  */
 void Classify::RemoveExtraPuncs(ADAPT_RESULTS *Results) {
   int Next, NextGood;
@@ -2189,11 +2135,8 @@ void Classify::RemoveExtraPuncs(ADAPT_RESULTS *Results) {
  *
  * Globals:
  * - matcher_good_threshold default good match rating
- *
- * @note Exceptions: none
- * @note History: Tue Apr  9 08:33:13 1991, DSJ, Created.
  */
-void Classify::SetAdaptiveThreshold(FLOAT32 Threshold) {
+void Classify::SetAdaptiveThreshold(float Threshold) {
   Threshold = (Threshold == matcher_good_threshold) ? 0.9: (1.0 - Threshold);
   classify_adapt_proto_threshold.set_value(
       ClipToRange<int>(255 * Threshold, 0, 255));
@@ -2209,9 +2152,6 @@ void Classify::SetAdaptiveThreshold(FLOAT32 Threshold) {
  * @param shape_id classifier id to work with
  * @param features features of the unknown character
  * @param num_features Number of features in the features array.
- *
- * @note Exceptions: none
- * @note History: Fri Mar 22 08:43:52 1991, DSJ, Created.
  */
 
 void Classify::ShowBestMatchFor(int shape_id,
