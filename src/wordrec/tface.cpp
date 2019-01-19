@@ -21,17 +21,12 @@
 #include "chop.h"
 #include "chopper.h"
 #include "globals.h"
-#include "gradechop.h"
 #include "pageres.h"
 #include "wordrec.h"
 #include "featdefs.h"
 #include "params_model.h"
 
 #include <cmath>
-#ifdef __UNIX__
-#include <unistd.h>
-#endif
-
 
 namespace tesseract {
 

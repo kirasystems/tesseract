@@ -32,7 +32,7 @@
 #include <iostream>
 
 // The current color values we use, initially white (== ScrollView::WHITE).
-int rgb[3] = { 255, 255, 255 };
+static int rgb[3] = { 255, 255, 255 };
 
 class SVPaint : public SVEventHandler {
  public:
@@ -171,7 +171,7 @@ void SVPaint::Notify(const SVEvent* sv_event) {
   else if (sv_event->type == SVET_SELECTION) { SelectionHandler(sv_event); }
   else if (sv_event->type == SVET_MENU) { MenuBarHandler(sv_event); }
   else if (sv_event->type == SVET_POPUP) { PopupHandler(sv_event); }
-  else {} //throw other events away
+  //throw other events away
 }
 
 // Builds a new window, initializes the variables and event handler and builds
@@ -180,7 +180,7 @@ SVPaint::SVPaint(const char *server_name) {
   window_ = new ScrollView("ScrollView Paint Example",  // window caption
                             0, 0,                       // x,y window position
                             500, 500,                   // window size
-  		                    500, 500,                   // canvas size
+                            500, 500,                   // canvas size
                             false,      // whether the Y axis is inversed.
                                         // this is included due to legacy
                                         // reasons for tesseract and enables
@@ -228,8 +228,8 @@ SVPaint::SVPaint(const char *server_name) {
 // If a parameter is given, we try to connect to the given server.
 // This enables us to test the remote capabilities of ScrollView.
 int main(int argc, char** argv) {
-	const char* server_name;
-	if (argc > 1) { server_name = argv[1]; } else { server_name = "localhost"; }
-	SVPaint svp(server_name);
+  const char* server_name;
+  if (argc > 1) { server_name = argv[1]; } else { server_name = "localhost"; }
+  SVPaint svp(server_name);
 }
 #endif  // GRAPHICS_DISABLED

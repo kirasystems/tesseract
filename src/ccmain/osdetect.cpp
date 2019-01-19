@@ -17,6 +17,10 @@
 //
 ///////////////////////////////////////////////////////////////////////
 
+#include <algorithm>
+#include <cmath>        // for std::fabs
+#include <memory>
+
 #include "osdetect.h"
 
 #include "blobbox.h"
@@ -32,12 +36,6 @@
 #include "tabvector.h"
 #include "tesseractclass.h"
 #include "textord.h"
-
-#include <algorithm>
-#include <memory>
-
-const int kMinCharactersToTry = 50;
-const int kMaxCharactersToTry = 5 * kMinCharactersToTry;
 
 const float kSizeRatioToReject = 2.0;
 const int kMinAcceptableBlobHeight = 10;
@@ -255,7 +253,10 @@ int os_detect(TO_BLOCK_LIST* port_blocks, OSResults* osr,
       TBOX      box = blob->bounding_box();
       ++blobs_total;
 
-      float y_x = fabs((box.height() * 1.0) / box.width());
+      // Catch illegal value of box width and avoid division by zero.
+      if (box.width() == 0) continue;
+      // TODO: Can height and width be negative? If not, remove fabs.
+      float y_x = std::fabs((box.height() * 1.0f) / box.width());
       float x_y = 1.0f / y_x;
       // Select a >= 1.0 ratio
       float ratio = x_y > y_x ? x_y : y_x;
@@ -278,6 +279,8 @@ int os_detect_blobs(const GenericVector<int>* allowed_scripts,
                     BLOBNBOX_CLIST* blob_list, OSResults* osr,
                     tesseract::Tesseract* tess) {
   OSResults osr_;
+  int minCharactersToTry = tess->min_characters_to_try;
+  int maxCharactersToTry = 5 * minCharactersToTry;
   if (osr == nullptr)
     osr = &osr_;
 
@@ -286,13 +289,13 @@ int os_detect_blobs(const GenericVector<int>* allowed_scripts,
   ScriptDetector s(allowed_scripts, osr, tess);
 
   BLOBNBOX_C_IT filtered_it(blob_list);
-  int real_max = std::min(filtered_it.length(), kMaxCharactersToTry);
+  int real_max = std::min(filtered_it.length(), maxCharactersToTry);
   // tprintf("Total blobs found = %d\n", blobs_total);
   // tprintf("Number of blobs post-filtering = %d\n", filtered_it.length());
   // tprintf("Number of blobs to try = %d\n", real_max);
 
   // If there are too few characters, skip this page entirely.
-  if (real_max < kMinCharactersToTry / 2) {
+  if (real_max < minCharactersToTry / 2) {
     tprintf("Too few characters. Skipping this page\n");
     return 0;
   }
@@ -307,7 +310,7 @@ int os_detect_blobs(const GenericVector<int>* allowed_scripts,
   int num_blobs_evaluated = 0;
   for (int i = 0; i < real_max; ++i) {
     if (os_detect_blob(blobs[sequence.GetVal()], &o, &s, osr, tess)
-        && i > kMinCharactersToTry) {
+        && i > minCharactersToTry) {
       break;
     }
     ++num_blobs_evaluated;

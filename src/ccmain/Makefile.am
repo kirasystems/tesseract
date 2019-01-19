@@ -25,6 +25,7 @@ endif
 
 pkginclude_HEADERS = \
     thresholder.h \
+    osdetect.h \
     ltrresultiterator.h \
     pageiterator.h \
     resultiterator.h
@@ -38,7 +39,6 @@ noinst_HEADERS = \
     output.h \
     paragraphs.h \
     paragraphs_internal.h \
-    osdetect.h \
     paramsd.h \
     pgedit.h \
     reject.h \
@@ -55,6 +55,7 @@ libtesseract_main_la_SOURCES = \
   fixxht.cpp \
   linerec.cpp \
   ltrresultiterator.cpp \
+  mutableiterator.cpp \
   output.cpp \
   pageiterator.cpp \
   pagesegmain.cpp \

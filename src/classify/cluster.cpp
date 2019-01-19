@@ -15,16 +15,18 @@
  ** limitations under the License.
  *****************************************************************************/
 
+#include <cfloat>       // for FLT_MAX
+#include <cmath>
+#include <vector>       // for std::vector
+
 #include "cluster.h"
-#include "cutil.h"     // for void_proc
+#include "cutil.h"      // for void_proc
 #include "emalloc.h"
 #include "genericheap.h"
 #include "helpers.h"
 #include "kdpair.h"
 #include "matrix.h"
 #include "tprintf.h"
-#include <cfloat>      // for FLT_MAX
-#include <cmath>
 
 #define HOTELLING 1  // If true use Hotelling's test to decide where to split.
 #define FTABLE_X 10  // Size of FTable.
@@ -204,7 +206,7 @@ typedef double (*SOLVEFUNC) (CHISTRUCT *, double);
 
 #define Odd(N) ((N)%2)
 #define Mirror(N,R) ((R) - (N) - 1)
-#define Abs(N) ( ( (N) < 0 ) ? ( -(N) ) : (N) )
+#define Abs(N) (((N) < 0) ? (-(N)) : (N))
 
 //--------------Global Data Definitions and Declarations----------------------
 /** the following variables describe a discrete normal distribution
@@ -477,7 +479,7 @@ SAMPLE* MakeSample(CLUSTERER * Clusterer, const float* Feature,
     Clusterer->NumChar = CharID + 1;
 
   // execute hook for monitoring clustering operation
-  // (*SampleCreationHook)( Sample );
+  // (*SampleCreationHook)(Sample);
 
   return (Sample);
 }                                // MakeSample
@@ -1084,10 +1086,9 @@ PROTOTYPE *TestEllipticalProto(CLUSTERER *Clusterer,
   int TotalDims = Left->SampleCount + Right->SampleCount;
   if (TotalDims < N + 1 || TotalDims < 2)
     return nullptr;
-  const int kMatrixSize = N * N * sizeof(float);
-  float *Covariance = static_cast<float *>(Emalloc(kMatrixSize));
-  float *Inverse = static_cast<float *>(Emalloc(kMatrixSize));
-  float *Delta = static_cast<float *>(Emalloc(N * sizeof(float)));
+  std::vector<float> Covariance(static_cast<size_t>(N) * N);
+  std::vector<float> Inverse(static_cast<size_t>(N) * N);
+  std::vector<float> Delta(N);
   // Compute a new covariance matrix that only uses essential features.
   for (int i = 0; i < N; ++i) {
     int row_offset = i * N;
@@ -1107,7 +1108,7 @@ PROTOTYPE *TestEllipticalProto(CLUSTERER *Clusterer,
       }
     }
   }
-  double err = InvertMatrix(Covariance, N, Inverse);
+  double err = InvertMatrix(&Covariance[0], N, &Inverse[0]);
   if (err > 1) {
     tprintf("Clustering error: Matrix inverse failed with error %g\n", err);
   }
@@ -1125,13 +1126,10 @@ PROTOTYPE *TestEllipticalProto(CLUSTERER *Clusterer,
   for (int x = 0; x < N; ++x) {
     double temp = 0.0;
     for (int y = 0; y < N; ++y) {
-      temp += Inverse[y + N*x] * Delta[y];
+      temp += static_cast<double>(Inverse[y + N * x]) * Delta[y];
     }
     Tsq += Delta[x] * temp;
   }
-  free(Covariance);
-  free(Inverse);
-  free(Delta);
   // Changed this function to match the formula in
   // Statistical Methods in Medical Research p 473
   // By Peter Armitage, Geoffrey Berry, J. N. S. Matthews.
@@ -1370,7 +1368,7 @@ ComputeStatistics (int16_t N, PARAM_DESC ParamDesc[], CLUSTER * Cluster) {
 
   // allocate memory to hold the statistics results
   Statistics = (STATISTICS *) Emalloc (sizeof (STATISTICS));
-  Statistics->CoVariance = (float *) Emalloc (N * N * sizeof (float));
+  Statistics->CoVariance = (float *)Emalloc(sizeof(float) * N * N);
   Statistics->Min = (float *) Emalloc (N * sizeof (float));
   Statistics->Max = (float *) Emalloc (N * sizeof (float));
 
@@ -2233,7 +2231,7 @@ CHISTRUCT *NewChiStruct(uint16_t DegreesOfFreedom, double Alpha) {
 
 /**
  * This routine attempts to find an x value at which Function
- * goes to zero (i.e. a root of the function ).  It will only
+ * goes to zero (i.e. a root of the function).  It will only
  * work correctly if a solution actually exists and there
  * are no extrema between the solution and the InitialGuess.
  * The algorithms used are extremely primitive.
@@ -2242,7 +2240,7 @@ CHISTRUCT *NewChiStruct(uint16_t DegreesOfFreedom, double Alpha) {
  * @param FunctionParams  arbitrary data to pass to function
  * @param InitialGuess  point to start solution search at
  * @param Accuracy  maximum allowed error
- * @return Solution of function ( x for which f(x) = 0 ).
+ * @return Solution of function (x for which f(x) = 0).
  */
 double
 Solve (SOLVEFUNC Function,
@@ -2296,8 +2294,8 @@ void *FunctionParams, double InitialGuess, double Accuracy)
  * from 0 to x, minus the desired area under the curve.  The
  * number of degrees of freedom of the chi curve is specified
  * in the ChiParams structure.  The desired area is also
- * specified in the ChiParams structure as Alpha ( or 1 minus
- * the desired area ).  This routine is intended to be passed
+ * specified in the ChiParams structure as Alpha (or 1 minus
+ * the desired area).  This routine is intended to be passed
  * to the Solve() function to find the value of chi-squared
  * which will yield a desired area under the right tail of
  * the chi density curve.  The function will only work for
@@ -2485,7 +2483,7 @@ double InvertMatrix(const float* input, int size, float* inv) {
     for (col = 0; col < size; col++) {
       double sum = 0.0;
       for (int k = 0; k < size; ++k) {
-        sum += input[row*size + k] * inv[k *size + col];
+        sum += static_cast<double>(input[row * size + k]) * inv[k * size + col];
       }
       if (row != col) {
         error_sum += Abs(sum);

@@ -24,8 +24,8 @@
 
 #include          "pgedit.h"
 
-#include          <ctype.h>
-#include          <math.h>
+#include          <cctype>
+#include          <cmath>
 
 #include "blread.h"
 #include "control.h"
@@ -100,18 +100,15 @@ enum ColorationMode {
  *
  */
 
-ScrollView* image_win;
-ParamsEditor* pe;
-bool stillRunning = false;
+static ScrollView* image_win;
+static ParamsEditor* pe;
+static bool stillRunning = false;
 
-#ifdef __UNIX__
-FILE *debug_window = nullptr;                // opened on demand
-#endif
-ScrollView* bln_word_window = nullptr;       // baseline norm words
+static ScrollView* bln_word_window = nullptr; // baseline norm words
 
-CMD_EVENTS mode = CHANGE_DISP_CMD_EVENT;  // selected words op
+static CMD_EVENTS mode = CHANGE_DISP_CMD_EVENT; // selected words op
 
-bool recog_done = false;                  // recog_all_words was called
+static bool recog_done = false; // recog_all_words was called
 
 // These variables should remain global, since they are only used for the
 // debug mode (in which only a single Tesseract thread/instance will exist).

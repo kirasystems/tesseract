@@ -33,7 +33,7 @@
 #include "params.h"
 
 #include <algorithm>
-#include <ctype.h>
+#include <cctype>
 #include "dict.h"
 
 /*----------------------------------------------------------------------
@@ -88,7 +88,7 @@ void Dict::go_deeper_dawg_fxn(
       ++num_unigrams;
       word->append_unichar_id(uch_id, 1, 0.0, 0.0);
       unigrams_ok = (this->*letter_is_okay_)(
-          &unigram_dawg_args,
+          &unigram_dawg_args, *word->unicharset(),
           word->unichar_id(word_index+num_unigrams-1),
           word_ending && i == encoding.size() - 1);
       (*unigram_dawg_args.active_dawgs) = *(unigram_dawg_args.updated_dawgs);
@@ -111,7 +111,8 @@ void Dict::go_deeper_dawg_fxn(
   // Check which dawgs from the dawgs_ vector contain the word
   // up to and including the current unichar.
   if (checked_unigrams || (this->*letter_is_okay_)(
-      more_args, word->unichar_id(word_index), word_ending)) {
+      more_args, *word->unicharset(), word->unichar_id(word_index),
+      word_ending)) {
     // Add a new word choice
     if (word_ending) {
       if (dawg_debug_level) {
@@ -253,8 +254,7 @@ void Dict::append_choices(
     WERD_CHOICE *best_choice,
     int *attempts_left,
     void *more_args) {
-  int word_ending =
-    (char_choice_index == char_choices.length() - 1) ? true : false;
+  int word_ending = (char_choice_index == char_choices.length() - 1);
 
   // Deal with fragments.
   CHAR_FRAGMENT_INFO char_frag_info;

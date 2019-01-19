@@ -27,11 +27,11 @@
 
 namespace tesseract {
 
-#if (defined(_MSC_VER) && _MSC_VER < 1900) || defined(ANDROID)
+#if defined(ANDROID)
 static inline double log2(double n) {
   return log(n) / log(2.0);
 }
-#endif  // _MSC_VER
+#endif // ANDROID
 
 // Number of iterations after which the correction effectively becomes unity.
 const int kAdamCorrectionIterations = 200000;
@@ -45,6 +45,11 @@ void TransposedArray::Transpose(const GENERIC_2D_ARRAY<double>& input) {
   ResizeNoInit(num_features, width);
   for (int t = 0; t < width; ++t) WriteStrided(t, input[t]);
 }
+
+// Destructor.
+// It is defined here, so the compiler can create a single vtable
+// instead of weak vtables in every compilation unit.
+TransposedArray::~TransposedArray() = default;
 
 // Sets up the network for training. Initializes weights using weights of
 // scale `range` picked according to the random number generator `randomizer`.

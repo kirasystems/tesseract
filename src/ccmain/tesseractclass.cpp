@@ -271,7 +271,7 @@ Tesseract::Tesseract()
                   this->params()),
       double_MEMBER(quality_rowrej_pc, 1.1,
                     "good_quality_doc gte good char limit", this->params()),
-      BOOL_MEMBER(unlv_tilde_crunching, true,
+      BOOL_MEMBER(unlv_tilde_crunching, false,
                   "Mark v.bad words for tilde crunch", this->params()),
       BOOL_MEMBER(hocr_font_info, false, "Add font info to hocr output",
                   this->params()),
@@ -394,6 +394,12 @@ Tesseract::Tesseract()
       BOOL_MEMBER(textonly_pdf, false,
                   "Create PDF with only one invisible text layer",
                   this->params()),
+      INT_MEMBER(jpg_quality, 85, "Set JPEG quality level", this->params()),
+      INT_MEMBER(user_defined_dpi, 0, "Specify DPI for input image",
+                 this->params()),
+      INT_MEMBER(min_characters_to_try, 50,
+                 "Specify minimum characters to try during OSD",
+                 this->params()),
       STRING_MEMBER(unrecognised_char, "|",
                     "Output char for unidentified blobs", this->params()),
       INT_MEMBER(suspect_level, 99, "Suspect marker level", this->params()),
@@ -508,9 +514,12 @@ Tesseract::Tesseract()
       STRING_MEMBER(page_separator, "\f",
                     "Page separator (default is form feed control character)",
                     this->params()),
-      BOOL_MEMBER(glyph_confidences, false,
-                  "Allows to include glyph confidences in the hOCR output",
-                   this->params()),
+      INT_MEMBER(lstm_choice_mode, 0,
+          "Allows to include alternative symbols choices in the hOCR output. "
+          "Valid input values are 0, 1 and 2. 0 is the default value. "
+          "With 1 the alternative symbol choices per timestep are included. "
+          "With 2 the alternative symbol choices are accumulated per character.",
+          this->params()),
 
       backup_config_file_(nullptr),
       pix_binary_(nullptr),

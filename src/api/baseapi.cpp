@@ -2,7 +2,6 @@
  * File:        baseapi.cpp
  * Description: Simple API for calling tesseract.
  * Author:      Ray Smith
- * Created:     Fri Oct 06 15:35:01 PDT 2006
  *
  * (C) Copyright 2006, Google Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,14 +23,14 @@
 
 #include "baseapi.h"
 #ifdef __linux__
-#include <signal.h>            // for sigaction, SA_RESETHAND, SIGBUS, SIGFPE
+#include <csignal>            // for sigaction, SA_RESETHAND, SIGBUS, SIGFPE
 #endif
 
 #if defined(_WIN32)
-#if defined(MINGW)
+#if defined(__MINGW32__)
 // workaround for stdlib.h with -std=c++11 for _splitpath and _MAX_FNAME
 #undef __STRICT_ANSI__
-#endif  // MINGW
+#endif  // __MINGW32__
 #include <fcntl.h>
 #include <io.h>
 #else
@@ -173,6 +172,13 @@ static void addAvailableLanguages(const STRING &datadir, const STRING &base,
 #endif
 }
 
+// Compare two STRING values (used for sorting).
+static int CompareSTRING(const void* p1, const void* p2) {
+  const STRING* s1 = static_cast<const STRING*>(p1);
+  const STRING* s2 = static_cast<const STRING*>(p2);
+  return strcmp(s1->c_str(), s2->c_str());
+}
+
 TessBaseAPI::TessBaseAPI()
     : tesseract_(nullptr),
       osd_tesseract_(nullptr),
@@ -226,13 +232,13 @@ const char* TessBaseAPI::Version() {
  * otherwise *device=nullptr and returns 0.
  */
 #ifdef USE_OPENCL
-#if USE_DEVICE_SELECTION
+#ifdef USE_DEVICE_SELECTION
 #include "opencl_device_selection.h"
 #endif
 #endif
 size_t TessBaseAPI::getOpenCLDevice(void **data) {
 #ifdef USE_OPENCL
-#if USE_DEVICE_SELECTION
+#ifdef USE_DEVICE_SELECTION
   ds_device device = OpenclDevice::getDeviceSelection();
   if (device.type == DS_DEVICE_OPENCL_DEVICE) {
     *data = new cl_device_id;
@@ -459,13 +465,14 @@ void TessBaseAPI::GetLoadedLanguagesAsVector(
 }
 
 /**
- * Returns the available languages in the vector of STRINGs.
+ * Returns the available languages in the sorted vector of STRINGs.
  */
 void TessBaseAPI::GetAvailableLanguagesAsVector(
     GenericVector<STRING>* langs) const {
   langs->clear();
   if (tesseract_ != nullptr) {
     addAvailableLanguages(tesseract_->datadir, "", langs);
+    langs->sort(CompareSTRING);
   }
 }
 
@@ -611,6 +618,13 @@ void TessBaseAPI::SetSourceResolution(int ppi) {
  */
 void TessBaseAPI::SetImage(Pix* pix) {
   if (InternalSetImage()) {
+    if (pixGetSpp(pix) == 4 && pixGetInputFormat(pix) == IFF_PNG) {
+      // remove alpha channel from png
+      PIX* p1 = pixRemoveAlpha(pix);
+      pixSetSpp(p1, 3);
+      pix = pixCopy(nullptr, p1);
+      pixDestroy(&p1);
+    }
     thresholder_->SetImage(pix);
     SetInputImage(thresholder_->GetPixRect());
   }
@@ -1123,6 +1137,15 @@ bool TessBaseAPI::ProcessPagesInternal(const char* filename,
     buf.assign((std::istreambuf_iterator<char>(std::cin)),
                (std::istreambuf_iterator<char>()));
     data = reinterpret_cast<const l_uint8 *>(buf.data());
+  } else {
+    // Check whether the input file can be read.
+    if (FILE* file = fopen(filename, "rb")) {
+      fclose(file);
+    } else {
+      fprintf(stderr, "Error, cannot read input file %s: %s\n",
+              filename, strerror(errno));
+      return false;
+    }
   }
 
   // Here is our autodetection
@@ -1544,8 +1567,8 @@ char* TessBaseAPI::GetHOCRText(ETEXT_DESC* monitor, int page_number) {
 
     // Now, process the word...
     std::vector<std::vector<std::pair<const char*, float>>>* confidencemap = nullptr;
-    if (tesseract_->glyph_confidences) {
-      confidencemap = res_it->GetGlyphConfidences();
+    if (tesseract_->lstm_choice_mode) {
+      confidencemap = res_it->GetBestLSTMSymbolChoices();
     }
     hocr_str += "\n      <span class='ocrx_word'";
     AddIdTohOCR(&hocr_str, "word", page_id, wcnt);
@@ -1605,17 +1628,16 @@ char* TessBaseAPI::GetHOCRText(ETEXT_DESC* monitor, int page_number) {
     } while (!res_it->Empty(RIL_BLOCK) && !res_it->IsAtBeginningOf(RIL_WORD));
     if (italic) hocr_str += "</em>";
     if (bold) hocr_str += "</strong>";
-    // If glyph confidence is required it is added here
-    if (tesseract_->glyph_confidences && confidencemap != nullptr) {
+    // If the lstm choice mode is required it is added here
+    if (tesseract_->lstm_choice_mode == 1 && confidencemap != nullptr) {
       for (size_t i = 0; i < confidencemap->size(); i++) {
         hocr_str += "\n       <span class='ocrx_cinfo'";
         AddIdTohOCR(&hocr_str, "timestep", page_id, wcnt, tcnt);
         hocr_str += ">";
-        //*
         std::vector<std::pair<const char*, float>> timestep = (*confidencemap)[i];
         for (std::pair<const char*, float> conf : timestep) {
           hocr_str += "<span class='ocr_glyph'";
-          AddIdTohOCR(&hocr_str, "glyph", page_id, wcnt, gcnt);
+          AddIdTohOCR(&hocr_str, "choice", page_id, wcnt, gcnt);
           hocr_str.add_str_int(" title='x_confs ", int(conf.second * 100));
           hocr_str += "'";
           hocr_str += ">";
@@ -1623,9 +1645,31 @@ char* TessBaseAPI::GetHOCRText(ETEXT_DESC* monitor, int page_number) {
           hocr_str += "</span>";
           gcnt++;
         }
-        //*/
         hocr_str += "</span>";
         tcnt++;
+      }
+    } else if (tesseract_->lstm_choice_mode == 2 && confidencemap != nullptr) {
+      for (size_t i = 0; i < confidencemap->size(); i++) {
+        std::vector<std::pair<const char*, float>> timestep = (*confidencemap)[i];
+        if (timestep.size() > 0) {
+          hocr_str += "\n       <span class='ocrx_cinfo'";
+          AddIdTohOCR(&hocr_str, "lstm_choices", page_id, wcnt, tcnt);
+          hocr_str += " chosen='";
+          hocr_str += timestep[0].first;
+          hocr_str += "'>";
+          for (size_t j = 1; j < timestep.size(); j++) {
+            hocr_str += "<span class='ocr_glyph'";
+            AddIdTohOCR(&hocr_str, "choice", page_id, wcnt, gcnt);
+            hocr_str.add_str_int(" title='x_confs ", int(timestep[j].second * 100));
+            hocr_str += "'";
+            hocr_str += ">";
+            hocr_str += timestep[j].first;
+            hocr_str += "</span>";
+            gcnt++;
+          }
+          hocr_str += "</span>";
+          tcnt++;
+        }
       }
     }
     hocr_str += "</span>";
@@ -2292,12 +2336,22 @@ bool TessBaseAPI::Threshold(Pix** pix) {
   if (*pix != nullptr)
     pixDestroy(pix);
   // Zero resolution messes up the algorithms, so make sure it is credible.
+  int user_dpi = 0;
+  bool a = GetIntVariable("user_defined_dpi", &user_dpi);
   int y_res = thresholder_->GetScaledYResolution();
-  if (y_res < kMinCredibleResolution || y_res > kMaxCredibleResolution) {
-    // Use the minimum default resolution, as it is safer to under-estimate
-    // than over-estimate resolution.
-    tprintf("Warning. Invalid resolution %d dpi. Using %d instead.\n", y_res,
-            kMinCredibleResolution);
+  if (user_dpi && (user_dpi < kMinCredibleResolution ||
+      user_dpi > kMaxCredibleResolution)) {
+    tprintf("Warning: User defined image dpi is outside of expected range "
+            "(%d - %d)!\n",
+            kMinCredibleResolution, kMaxCredibleResolution);
+  }
+  // Always use user defined dpi
+  if (user_dpi) {
+    thresholder_->SetSourceYResolution(user_dpi);
+  } else if (y_res < kMinCredibleResolution ||
+             y_res > kMaxCredibleResolution) {
+    tprintf("Warning: Invalid resolution %d dpi. Using %d instead.\n",
+            y_res, kMinCredibleResolution);
     thresholder_->SetSourceYResolution(kMinCredibleResolution);
   }
   PageSegMode pageseg_mode =
@@ -2322,7 +2376,8 @@ bool TessBaseAPI::Threshold(Pix** pix) {
                                   kMinCredibleResolution,
                                   kMaxCredibleResolution);
   if (estimated_res != thresholder_->GetScaledEstimatedResolution()) {
-    tprintf("Estimated resolution %d out of range! Corrected to %d\n",
+    tprintf("Estimated internal resolution %d out of range! "
+            "Corrected to %d.\n",
             thresholder_->GetScaledEstimatedResolution(), estimated_res);
   }
   tesseract_->set_source_resolution(estimated_res);

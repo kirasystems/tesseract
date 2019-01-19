@@ -22,9 +22,10 @@ SUBDIRS = src/arch src/ccutil src/viewer src/cutil src/opencl src/ccstruct
 SUBDIRS += src/dict src/classify src/wordrec src/textord src/lstm
 SUBDIRS += src/ccmain src/api . tessdata doc unittest
 
-EXTRA_DIST = README.md\
-	aclocal.m4 config configure.ac autogen.sh contrib \
-	tesseract.pc.in $(TRAINING_SUBDIR) java doc unlvtests
+EXTRA_DIST = README.md
+EXTRA_DIST += aclocal.m4 config configure.ac autogen.sh
+EXTRA_DIST += tesseract.pc.in $(TRAINING_SUBDIR) java doc langtests unlvtests
+EXTRA_DIST += CMakeLists.txt tesseract.pc.cmake cmake VERSION src/vs2010 cppan.yml
 
 DIST_SUBDIRS = $(SUBDIRS) $(TRAINING_SUBDIR)
 
@@ -35,15 +36,11 @@ dist-hook:
 # Need to remove .svn directories from directories
 # added using EXTRA_DIST. $(distdir)/tessdata would in
 # theory suffice.
-	rm -rf $(find $(distdir) -name .svn)
-	rm -rf $(find $(distdir) -name .git)
-	rm -rf $(find $(distdir) -name .deps)
-	rm -rf $(find $(distdir) -name .libs)
-	rm -rf $(find $(distdir) -name *.o)
-	rm -rf $(find $(distdir) -name *.lo)
-	rm -rf $(find $(distdir) -name *.la)
-	rm -rf $(find $(distdir)/training -executable -type f)
-	rm -rf $(distdir)/doc/html/*
+	rm -rf `find $(distdir) -name .deps -type d`
+	-rm -f $(distdir)/*/Makefile $(distdir)/*/*/Makefile
+	rm -f `find $(distdir) -name '*~'`
+	rm -rf $(find $(distdir)/src/training -executable -type f)
+	rm -rf $(distdir)/doc/html/* $(distdir)/doc/*.log
 
 ScrollView.jar:
 	@cd "$(top_builddir)/java" && $(MAKE) $@

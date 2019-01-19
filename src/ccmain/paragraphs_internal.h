@@ -2,7 +2,6 @@
  * File:        paragraphs_internal.h
  * Description: Paragraph Detection internal data structures.
  * Author:      David Eger
- * Created:     11 March 2011
  *
  * (C) Copyright 2011, Google Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,10 +20,12 @@
 #define TESSERACT_CCMAIN_PARAGRAPHS_INTERNAL_H_
 
 #include "paragraphs.h"
+#include "publictypes.h"        // for ParagraphJustification
 
 // NO CODE OUTSIDE OF paragraphs.cpp AND TESTS SHOULD NEED TO ACCESS
 // DATA STRUCTURES OR FUNCTIONS IN THIS FILE.
 
+class UNICHARSET;
 class WERD_CHOICE;
 
 namespace tesseract {
@@ -77,6 +78,13 @@ struct LineHypothesis {
       : ty(line_type), model(m) {}
   LineHypothesis(const LineHypothesis &other)
       : ty(other.ty), model(other.model) {}
+
+  // Copy assignment operator.
+  LineHypothesis& operator=(const LineHypothesis& other) {
+    ty = other.ty;
+    model = other.model;
+    return *this;
+  }
 
   bool operator==(const LineHypothesis &other) const {
     return ty == other.ty && model == other.model;
@@ -299,4 +307,5 @@ void CanonicalizeDetectionResults(
     PARA_LIST *paragraphs);
 
 }  // namespace
+
 #endif  // TESSERACT_CCMAIN_PARAGRAPHS_INTERNAL_H_

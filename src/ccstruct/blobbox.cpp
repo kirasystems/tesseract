@@ -31,12 +31,11 @@
 #include "environ.h"     // for l_uint32
 #include "helpers.h"     // for UpdateRange, IntCastRounded
 #include "host.h"        // for NearlyEqual, TRUE
-#include "ipoints.h"     // for operator+=, ICOORD::rotate
+#include "points.h"      // for operator+=, ICOORD::rotate
 
 struct Pix;
 
 #define PROJECTION_MARGIN 10     //arbitrary
-#define EXTERN
 
 ELISTIZE(BLOBNBOX)
 ELIST2IZE(TO_ROW)
@@ -103,7 +102,7 @@ void BLOBNBOX::merge(                    //merge blobs
 // Merge this with other, taking the outlines from other.
 // Other is not deleted, but left for the caller to handle.
 void BLOBNBOX::really_merge(BLOBNBOX* other) {
-  if (cblob_ptr != nullptr && other->cblob_ptr != nullptr) {
+  if (other->cblob_ptr != nullptr) {
     C_OUTLINE_IT ol_it(cblob_ptr->out_list());
     ol_it.add_list_after(other->cblob_ptr->out_list());
   }

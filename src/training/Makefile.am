@@ -14,7 +14,9 @@ AM_CPPFLAGS += \
     -I$(top_srcdir)/src/wordrec \
     -I$(top_srcdir)/src/cutil
 
-EXTRA_DIST = language-specific.sh tesstrain.sh tesstrain_utils.sh
+bin_SCRIPTS = language-specific.sh tesstrain.sh
+scripts_DATA = tesstrain_utils.sh
+scriptsdir = $(bindir)
 
 if DISABLED_LEGACY_ENGINE
 AM_CPPFLAGS += -DDISABLED_LEGACY_ENGINE
@@ -31,7 +33,6 @@ noinst_HEADERS = \
     commandlineflags.h \
     commontraining.h \
     degradeimage.h \
-    fileio.h \
     icuerrorcode.h \
     lang_model_helpers.h \
     ligature_table.h \
@@ -45,6 +46,7 @@ noinst_HEADERS = \
     util.h \
     validate_grapheme.h \
     validate_indic.h \
+    validate_javanese.h \
     validate_khmer.h \
     validate_myanmar.h \
     validator.h
@@ -65,7 +67,7 @@ libtesseract_training_la_SOURCES = \
     commandlineflags.cpp \
     commontraining.cpp \
     degradeimage.cpp \
-    fileio.cpp \
+    icuerrorcode.cpp \
     lang_model_helpers.cpp \
     ligature_table.cpp \
     lstmtester.cpp \
@@ -76,6 +78,7 @@ libtesseract_training_la_SOURCES = \
     unicharset_training_utils.cpp \
     validate_grapheme.cpp \
     validate_indic.cpp \
+    validate_javanese.cpp \
     validate_khmer.cpp \
     validate_myanmar.cpp \
     validator.cpp
@@ -218,8 +221,8 @@ text2image_LDADD = \
     $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 text2image_LDADD += \
     ../api/libtesseract.la
-text2image_LDADD += $(ICU_UC_LIBS) -lpango-1.0 -lpangocairo-1.0 \
-		    -lgobject-2.0 -lglib-2.0 -lcairo -lpangoft2-1.0 -lfontconfig
+text2image_LDADD += $(ICU_UC_LIBS) -lpango-1.0 -lpangocairo-1.0
+text2image_LDADD += -lgobject-2.0 -lglib-2.0 -lcairo -lpangoft2-1.0 -lfontconfig
 
 unicharset_extractor_SOURCES = unicharset_extractor.cpp
 #unicharset_extractor_LDFLAGS = -static

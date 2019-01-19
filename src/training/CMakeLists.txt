@@ -173,8 +173,7 @@ endif()
 ########################################
 
 set(unicharset_training_src
-    fileio.cpp
-    fileio.h
+    icuerrorcode.cpp
     icuerrorcode.h
     lang_model_helpers.cpp
     lang_model_helpers.h
@@ -186,9 +185,9 @@ set(unicharset_training_src
     unicharset_training_utils.h
 
     validate_grapheme.h validate_indic.h validate_khmer.h
-    validate_myanmar.h validator.h
+    validate_javanese.h validate_myanmar.h validator.h
     validate_grapheme.cpp validate_indic.cpp validate_khmer.cpp
-    validate_myanmar.cpp validator.cpp
+    validate_javanese.cpp validate_myanmar.cpp validator.cpp
 
 )
 add_library                 (unicharset_training ${unicharset_training_src})

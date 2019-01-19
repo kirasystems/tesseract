@@ -16,19 +16,44 @@
 #
 # USAGE: source tesstrain_utils.sh
 
-if [ "$(uname)" == "Darwin" ];then
+if [ -n "$BASH_VERSION" ];then
+  set -u  # comment in case of "unbound variable" error or fix the code
+  set -eo pipefail;
+else
+   echo "Warning: you aren't running script in bash - expect problems..."
+ fi
+
+UNAME=$(uname -s | tr 'A-Z' 'a-z')
+LANG_CODE="ENG"
+TIMESTAMP=`date +%Y-%m-%d`
+
+case $UNAME in
+  darwin | *freebsd | dragonfly | cygwin*)
+    MKTEMP_DT=$(mktemp -d -t)
+    ;;
+  * )
+    MKTEMP_DT=$(mktemp -d --tmpdir)
+    ;;
+esac
+FONT_CONFIG_CACHE=(${MKTEMP_DT} font_tmp.XXXXXXXXXX)
+
+if [[ ($UNAME == *darwin*) ]]; then
     FONTS_DIR="/Library/Fonts/"
-    FONT_CONFIG_CACHE=$(mktemp -d -t font_tmp.XXXXXXXXXX)
 else
     FONTS_DIR="/usr/share/fonts/"
-    FONT_CONFIG_CACHE=$(mktemp -d --tmpdir font_tmp.XXXXXXXXXX)
 fi
+
+MAX_PAGES=0
+SAVE_BOX_TIFF=0
 OUTPUT_DIR="/tmp/tesstrain/tessdata"
 OVERWRITE=0
 LINEDATA=0
 RUN_SHAPE_CLUSTERING=0
 EXTRACT_FONT_PROPERTIES=1
 WORKSPACE_DIR=$(mktemp -d)
+
+# set TESSDATA_PREFIX as empty, if not defined in environment to avoid an unbound variable
+TESSDATA_PREFIX=${TESSDATA_PREFIX:-}
 
 # Logging helper functions.
 tlog() {
@@ -130,11 +155,16 @@ parse_flags() {
             --langdata_dir)
                 parse_value "LANGDATA_ROOT" ${ARGV[$j]}
                 i=$j ;;
+            --maxpages)
+                parse_value "MAX_PAGES" ${ARGV[$j]}
+                i=$j ;;
             --output_dir)
                 parse_value "OUTPUT_DIR" ${ARGV[$j]}
                 i=$j ;;
             --overwrite)
                 OVERWRITE=1 ;;
+            --save_box_tiff)
+                SAVE_BOX_TIFF=1 ;;
             --linedata_only)
                 LINEDATA=1 ;;
             --extract_font_properties)
@@ -178,18 +208,17 @@ parse_flags() {
     fi
 
     # Location where intermediate files will be created.
-    TRAINING_DIR=${WORKSPACE_DIR}/${LANG_CODE}
+    TIMESTAMP=`date +%Y-%m-%d`
+    TMP_DIR=(${MKTEMP_DT} ${LANG_CODE}-${TIMESTAMP}.XXX )
+    TRAINING_DIR=${TMP_DIR}
     # Location of log file for the whole run.
     LOG_FILE=${TRAINING_DIR}/tesstrain.log
 
     # Take training text and wordlist from the langdata directory if not
     # specified in the command-line.
-    if [[ -z ${TRAINING_TEXT} ]]; then
-        TRAINING_TEXT=${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.training_text
-    fi
-    if [[ -z ${WORDLIST_FILE} ]]; then
-        WORDLIST_FILE=${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.wordlist
-    fi
+    TRAINING_TEXT=${TRAINING_TEXT:-${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.training_text}
+    WORDLIST_FILE=${TRAINING_TEXT:-${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.wordlist}
+
     WORD_BIGRAMS_FILE=${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.word.bigrams
     NUMBERS_FILE=${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.numbers
     PUNC_FILE=${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.punc
@@ -221,7 +250,7 @@ generate_font_image() {
     common_args+=" --fonts_dir=${FONTS_DIR} --strip_unrenderable_words"
     common_args+=" --leading=${LEADING}"
     common_args+=" --char_spacing=${CHAR_SPACING} --exposure=${EXPOSURE}"
-    common_args+=" --outputbase=${outbase} --max_pages=0"
+    common_args+=" --outputbase=${outbase} --max_pages=${MAX_PAGES}"
 
     # add --writing_mode=vertical-upright to common_args if the font is
     # specified to be rendered vertically.
@@ -233,7 +262,7 @@ generate_font_image() {
     done
 
     run_command text2image ${common_args} --font="${font}" \
-        --text=${TRAINING_TEXT} ${TEXT2IMAGE_EXTRA_ARGS}
+        --text=${TRAINING_TEXT}  ${TEXT2IMAGE_EXTRA_ARGS:-}
     check_file_readable ${outbase}.box ${outbase}.tif
 
     if ((EXTRACT_FONT_PROPERTIES)) &&
@@ -245,7 +274,6 @@ generate_font_image() {
         check_file_readable ${outbase}.fontinfo
     fi
 }
-
 
 # Phase I : Generate (I)mages from training text for each font.
 phase_I_generate_image() {
@@ -527,6 +555,9 @@ make__lstmdata() {
     --puncs "${lang_prefix}.punc" \
     --output_dir "${OUTPUT_DIR}" --lang "${LANG_CODE}" \
     "${pass_through}" "${lang_is_rtl}"
+    
+  if ((SAVE_BOX_TIFF)); then
+    tlog "\n=== Saving box/tiff pairs for training data ==="
   for f in "${TRAINING_DIR}/${LANG_CODE}".*.box; do
     tlog "Moving ${f} to ${OUTPUT_DIR}"
     mv "${f}" "${OUTPUT_DIR}"
@@ -535,6 +566,8 @@ make__lstmdata() {
     tlog "Moving ${f} to ${OUTPUT_DIR}"
     mv "${f}" "${OUTPUT_DIR}"
   done
+  fi
+  tlog "\n=== Moving lstmf files for training data ==="
   for f in "${TRAINING_DIR}/${LANG_CODE}".*.lstmf; do
     tlog "Moving ${f} to ${OUTPUT_DIR}"
     mv "${f}" "${OUTPUT_DIR}"

@@ -18,11 +18,11 @@
  **********************************************************************/
 
 #include "paragraphs.h"
-#include <ctype.h>                // for isspace
-#include <math.h>                 // for abs
-#include <stdio.h>                // for snprintf
-#include <stdlib.h>               // for abs
-#include <string.h>               // for strchr, strlen
+#include <cctype>                 // for isspace
+#include <cmath>                  // for abs
+#include <cstdio>                 // for snprintf
+#include <cstdlib>                // for abs
+#include <cstring>                // for strchr, strlen
 #include <algorithm>              // for max
 #include <memory>                 // for unique_ptr
 #include "genericvector.h"        // for GenericVector, GenericVectorEqEq
@@ -2455,7 +2455,7 @@ static void InitializeRowInfo(bool after_recognition,
   int trailing_ws_idx = strlen(text.get());  // strip trailing space
   while (trailing_ws_idx > 0 &&
          // isspace() only takes ASCII
-         ((text[trailing_ws_idx - 1] & 0x80) == 0) &&
+         isascii(text[trailing_ws_idx - 1]) &&
          isspace(text[trailing_ws_idx - 1]))
     trailing_ws_idx--;
   if (trailing_ws_idx > 0) {

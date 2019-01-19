@@ -17,12 +17,9 @@
  *
  **********************************************************************/
 
-#include <ctype.h>
-#include <errno.h>
+#include <cctype>
+#include <cerrno>
 #include <cstring>
-#ifdef __UNIX__
-#include <unistd.h>
-#endif
 #include "helpers.h"
 #include "tessvars.h"
 #include "control.h"

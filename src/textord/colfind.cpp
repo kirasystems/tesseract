@@ -278,7 +278,7 @@ void ColumnFinder::CorrectOrientation(TO_BLOCK* block,
 // can be an integer factor reduction of the grey_pix. It represents the
 // thresholds that were used to create the binary_pix from the grey_pix.
 // If diacritic_blobs is non-null, then diacritics/noise blobs, that would
-// confuse layout anaylsis by causing textline overlap, are placed there,
+// confuse layout analysis by causing textline overlap, are placed there,
 // with the expectation that they will be reassigned to words later and
 // noise/diacriticness determined via classification.
 // Returns -1 if the user hits the 'd' key in the blocks window while running
@@ -1177,12 +1177,12 @@ void ColumnFinder::InsertRemainingNoise(TO_BLOCK* block) {
       }
     }
     if (best_part != nullptr &&
-        best_distance < kMaxDistToPartSizeRatio * best_part->median_size()) {
+        best_distance < kMaxDistToPartSizeRatio * best_part->median_height()) {
       // Close enough to merge.
       if (debug) {
         tprintf("Adding noise blob with distance %d, thr=%g:box:",
                 best_distance,
-                kMaxDistToPartSizeRatio * best_part->median_size());
+                kMaxDistToPartSizeRatio * best_part->median_height());
         blob->bounding_box().print();
         tprintf("To partition:");
         best_part->Print();

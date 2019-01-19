@@ -10,6 +10,7 @@
 #include "unicode/uscript.h"  // From libicu
 #include "validate_grapheme.h"
 #include "validate_indic.h"
+#include "validate_javanese.h"
 #include "validate_khmer.h"
 #include "validate_myanmar.h"
 
@@ -22,6 +23,11 @@ const char32 Validator::kZeroWidthJoiner = 0x200D;
 const char32 Validator::kLeftToRightMark = 0x200E;
 const char32 Validator::kRightToLeftMark = 0x200F;
 const char32 Validator::kInvalid = 0xfffd;
+
+// Destructor.
+// It is defined here, so the compiler can create a single vtable
+// instead of weak vtables in every compilation unit.
+Validator::~Validator() = default;
 
 // Validates and cleans the src vector of unicodes to the *dest, according to
 // g_mode. In the case of kSingleString, a single vector containing the whole
@@ -68,6 +74,9 @@ std::unique_ptr<Validator> Validator::ScriptValidator(ViramaScript script,
     case ViramaScript::kNonVirama:
       return std::unique_ptr<Validator>(
           new ValidateGrapheme(script, report_errors));
+    case ViramaScript::kJavanese:
+      return std::unique_ptr<Validator>(
+          new ValidateJavanese(script, report_errors));
     case ViramaScript::kMyanmar:
       return std::unique_ptr<Validator>(
           new ValidateMyanmar(script, report_errors));
@@ -135,13 +144,13 @@ ViramaScript Validator::MostFrequentViramaScript(
     const std::vector<char32>& utf32) {
   std::unordered_map<int, int> histogram;
   for (char32 ch : utf32) {
-    // Determine the codepage base. For the Indic scripts, and Khmer, it is
+    // Determine the codepage base. For the Indic scripts, Khmer and Javanese, it is
     // sufficient to divide by kIndicCodePageSize but Myanmar is all over the
     // unicode code space, so use its script id.
     int base = ch / kIndicCodePageSize;
     IcuErrorCode err;
     UScriptCode script_code = uscript_getScript(ch, err);
-    if ((kMinIndicUnicode <= ch && ch <= kMaxViramaScriptUnicode &&
+    if ((kMinIndicUnicode <= ch && ch <= kMaxJavaneseUnicode &&
          script_code != USCRIPT_COMMON) ||
         script_code == USCRIPT_MYANMAR) {
       if (script_code == USCRIPT_MYANMAR)
@@ -156,6 +165,7 @@ ViramaScript Validator::MostFrequentViramaScript(
     char32 codebase = static_cast<char32>(base * kIndicCodePageSize);
     // Check for validity.
     if (codebase == static_cast<char32>(ViramaScript::kMyanmar) ||
+        codebase == static_cast<char32>(ViramaScript::kJavanese) ||
         codebase == static_cast<char32>(ViramaScript::kKhmer) ||
         (static_cast<char32>(ViramaScript::kDevanagari) <= codebase &&
          codebase <= static_cast<char32>(ViramaScript::kSinhala))) {
@@ -170,7 +180,9 @@ ViramaScript Validator::MostFrequentViramaScript(
 bool Validator::IsVirama(char32 unicode) {
   return (kMinIndicUnicode <= unicode && unicode <= kMaxSinhalaUnicode &&
           (unicode & 0x7f) == 0x4d) ||
-         unicode == kSinhalaVirama || unicode == kMyanmarVirama ||
+         unicode == kSinhalaVirama ||
+         unicode == kJavaneseVirama ||
+         unicode == kMyanmarVirama ||
          unicode == kKhmerVirama;
 }
 
@@ -186,7 +198,9 @@ bool Validator::IsVedicAccent(char32 unicode) {
 bool Validator::IsSubscriptScript() const {
   return script_ == ViramaScript::kTelugu ||
          script_ == ViramaScript::kKannada ||
-         script_ == ViramaScript::kMyanmar || script_ == ViramaScript::kKhmer;
+         script_ == ViramaScript::kJavanese ||
+         script_ == ViramaScript::kMyanmar ||
+         script_ == ViramaScript::kKhmer;
 }
 
 void Validator::ComputeClassCodes(const std::vector<char32>& text) {

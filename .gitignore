@@ -98,15 +98,20 @@ kernel*.bin
 /unittest/*.trs
 
 # test programs
-/unittest/apiexample_test
-/unittest/intsimdmatrix_test
-/unittest/matrix_test
-/unittest/osd_test
+/unittest/*_test
+/unittest/primesbitvector
+/unittest/primesmap
 /unittest/tesseracttests
-/unittest/progress_test
-/unittest/loadlang_test
 
 # generated files from unlvtests
 times.txt
 /unlvtests/results*
 
+# snap packaging specific rules
+/parts/
+/stage/
+/prime/
+/snap/.snapcraft/
+
+/*.snap
+/*_source.tar.bz2

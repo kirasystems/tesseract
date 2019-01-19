@@ -744,8 +744,8 @@ class Tesseract : public Wordrec {
   // failing to find an appropriate blob for a box.
   // This means that occasionally, blobs may be incorrectly segmented if the
   // chopper fails to find a suitable chop point.
-  bool ResegmentCharBox(PAGE_RES* page_res, const TBOX *prev_box,
-                        const TBOX& box, const TBOX& next_box,
+  bool ResegmentCharBox(PAGE_RES* page_res, const TBOX* prev_box,
+                        const TBOX& box, const TBOX* next_box,
                         const char* correct_text);
   // Consume all source blobs that strongly overlap the given box,
   // putting them into a new word, with the correct_text label.
@@ -753,8 +753,8 @@ class Tesseract : public Wordrec {
   // applying the blobs to box or next_box with the least non-overlap.
   // Returns false if the box was in error, which can only be caused by
   // failing to find an overlapping blob for a box.
-  bool ResegmentWordBox(BLOCK_LIST *block_list,
-                        const TBOX& box, const TBOX& next_box,
+  bool ResegmentWordBox(BLOCK_LIST* block_list,
+                        const TBOX& box, const TBOX* next_box,
                         const char* correct_text);
   // Resegments the words by running the classifier in an attempt to find the
   // correct segmentation that produces the required string.
@@ -963,7 +963,7 @@ class Tesseract : public Wordrec {
   BOOL_VAR_H(bland_unrej, false, "unrej potential with no checks");
   double_VAR_H(quality_rowrej_pc, 1.1,
                "good_quality_doc gte good char limit");
-  BOOL_VAR_H(unlv_tilde_crunching, true,
+  BOOL_VAR_H(unlv_tilde_crunching, false,
              "Mark v.bad words for tilde crunch");
   BOOL_VAR_H(hocr_font_info, false,
              "Add font info to hocr output");
@@ -1041,6 +1041,10 @@ class Tesseract : public Wordrec {
   BOOL_VAR_H(tessedit_create_pdf, false, "Write .pdf output file");
   BOOL_VAR_H(textonly_pdf, false,
              "Create PDF with only one invisible text layer");
+  INT_VAR_H(jpg_quality, 85, "Set JPEG quality level");
+  INT_VAR_H(user_defined_dpi, 0, "Specify DPI for input image");
+  INT_VAR_H(min_characters_to_try, 50,
+            "Specify minimum characters to try during OSD");
   STRING_VAR_H(unrecognised_char, "|",
                "Output char for unidentified blobs");
   INT_VAR_H(suspect_level, 99, "Suspect marker level");
@@ -1114,7 +1118,11 @@ class Tesseract : public Wordrec {
              "Preserve multiple interword spaces");
   STRING_VAR_H(page_separator, "\f",
                "Page separator (default is form feed control character)");
-  BOOL_VAR_H(glyph_confidences, false, "Allows to include glyph confidences in the hOCR output");
+  INT_VAR_H(lstm_choice_mode, 0,
+            "Allows to include alternative symbols choices in the hOCR output. "
+            "Valid input values are 0, 1 and 2. 0 is the default value. "
+            "With 1 the alternative symbol choices per timestep are included. "
+            "With 2 the alternative symbol choices are accumulated per character.");
 
   //// ambigsrecog.cpp /////////////////////////////////////////////////////////
   FILE *init_recog_training(const STRING &fname);

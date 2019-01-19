@@ -25,7 +25,7 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 # Define date of package, etc. Could be useful in auto-generated
 # documentation.
 PACKAGE_YEAR=2018
-PACKAGE_DATE="03/12"
+PACKAGE_DATE="10/29"
 
 abs_top_srcdir=`AS_DIRNAME([$0])`
 
@@ -68,7 +68,6 @@ AC_CONFIG_HEADERS([config_auto.h:config/config.h.in])
 
 # default conditional
 AM_CONDITIONAL([T_WIN], false)
-AM_CONDITIONAL([MINGW], false)
 AM_CONDITIONAL([OSX], false)
 AM_CONDITIONAL([GRAPHICS_DISABLED], false)
 AC_SUBST([AM_CPPFLAGS])
@@ -83,15 +82,13 @@ OPENCL_LIBS="-lOpenCL"
 AC_CANONICAL_HOST
 case "${host_os}" in
     mingw*)
-        AC_DEFINE_UNQUOTED([MINGW], 1, [This is a MinGW system])
         AM_CONDITIONAL([T_WIN], true)
-        AM_CONDITIONAL([MINGW], true)
         AM_CONDITIONAL([ADD_RT], false)
         AC_SUBST([AM_LDFLAGS], ['-Wl,-no-undefined -Wl,--as-needed'])
         ;;
     cygwin*)
         AM_CONDITIONAL([ADD_RT], false)
-        AC_SUBST([AM_LDFLAGS], ['-Wl,-no-undefined -Wl,--as-needed'])
+        AC_SUBST([NOUNDEFINED], ['-no-undefined'])
         ;;
     solaris*)
         LIBS="-lsocket -lnsl -lrt -lxnet"
@@ -466,6 +463,7 @@ fi
 
 # Output files
 AC_CONFIG_FILES([Makefile tesseract.pc])
+AC_CONFIG_FILES([langtests/Makefile])
 AC_CONFIG_FILES([src/api/Makefile])
 AC_CONFIG_FILES([src/api/tess_version.h])
 AC_CONFIG_FILES([src/arch/Makefile])
@@ -502,6 +500,7 @@ echo "You can now build and install $PACKAGE_NAME by running:"
 echo ""
 echo "$ make"
 echo "$ sudo make install"
+echo "$ sudo ldconfig"
 echo ""
 
 AM_COND_IF([ASCIIDOC],

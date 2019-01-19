@@ -20,16 +20,14 @@
 
 #define NOMINMAX
 
-#include <stdarg.h>
-#include <limits.h>
+#include <algorithm>
+#include <climits>
+#include <cstdarg>
 #include <cstring>
 #include <map>
-#include <utility>
-#include <algorithm>
-#include <vector>
 #include <string>
-#include <cstring>
-#include <climits>
+#include <utility>
+#include <vector>
 
 // Include automatically generated configuration file if running autoconf.
 #ifdef HAVE_CONFIG_H
@@ -74,6 +72,11 @@ SVEvent* SVEvent::copy() {
   any->window = window;
   return any;
 }
+
+// Destructor.
+// It is defined here, so the compiler can create a single vtable
+// instead of weak vtables in every compilation unit.
+SVEventHandler::~SVEventHandler() = default;
 
 #ifndef GRAPHICS_DISABLED
 /// This is the main loop which handles the ScrollView-logic from the server
@@ -181,7 +184,7 @@ void* ScrollView::MessageReceiver(void* a) {
 }
 
 // Table to implement the color index values in the old system.
-int table_colors[ScrollView::GREEN_YELLOW+1][4]= {
+static const uint8_t table_colors[ScrollView::GREEN_YELLOW+1][4]= {
   {0, 0, 0, 0},        // NONE (transparent)
   {0, 0, 0, 255},        // BLACK.
   {255, 255, 255, 255},  // WHITE.
